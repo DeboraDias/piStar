@@ -374,7 +374,7 @@ ui.components.PropertiesTableView = Backbone.View.extend({
 
         if (ui.getSelectedCells()[0].remove) {
             $('#cell-actions').append(
-                '<a id="delete-element-button" class="btn btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'
+                '<a id="delete-element-button" class="btn btn-delete btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'
             );
             $('#delete-element-button').click(function (e) {
                 if (ui.getSelectedCells()) {
