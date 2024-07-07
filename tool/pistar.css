@@ -384,7 +384,7 @@ svg * {
 
 .editable-click, a.editable-click {
   border: none;
-  color: #333;
+  
   background-color: #EFEFEF;
   padding: 5px 10px; /* padding inside the box */
   border-radius: 5px; /* rounded edges */
@@ -401,6 +401,11 @@ svg * {
 
 .property-name {
   width: 20%;
+}
+
+.property-value {
+  position: relative;
+ 
 }
 
 .property-add{
@@ -554,8 +559,10 @@ svg * {
   display: inline-block;
   width: 16px;
   height: 16px;
-  margin-left: 5px;
-  background-image: url('/piStar/tool/app/ui/images/icon-pencil.svg'); /* Path to your icon image */
+  position: absolute; /* Absolute positioning to place it inside the container */
+  top: 5px; /* Adjust as needed */
+  right: 5px; /* Adjust as needed */
+  background-image: url('app/ui/images/icon-pencil.svg'); /* Ensure this path is correct */
   background-size: contain;
   background-repeat: no-repeat;
   vertical-align: middle;
