@@ -405,7 +405,6 @@ svg * {
 
 .property-value {
   position: relative;
- 
 }
 
 .property-add{
@@ -559,10 +558,10 @@ svg * {
   display: inline-block;
   width: 16px;
   height: 16px;
-  position: absolute; /* Absolute positioning to place it inside the container */
-  top: 5px; /* Adjust as needed */
-  right: 5px; /* Adjust as needed */
-  background-image: url('app/ui/images/icon-pencil.svg'); /* Ensure this path is correct */
+  position: absolute; /* absolute positioning to place it inside the container */
+  top: 5px; 
+  right: 5px; 
+  background-image: url('app/ui/images/icon-pencil.svg');
   background-size: contain;
   background-repeat: no-repeat;
   vertical-align: middle;
