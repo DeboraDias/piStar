@@ -1348,7 +1348,7 @@ $(document).keyup(function (e) {
                     // really a cell, but the diagram itself. Thus, only delete if it has this function.
                     if (ui.getSelectedCells()[0].isKindOfActor()) {
                         ui.confirm({
-                            message: 'ATTENTION! Are you sure you want to delete this entire actor, along with its content?',
+                            message: '<b>ATTENTION!</b>' + ' Are you sure you want to delete this entire actor, along with its content?' + '\nTIP: You can undo this action the "Go Back" button.',
                             callback: function (value) {
                                 if (value) {
                                     ui.deleteCell(ui.getSelectedCells()[0]);
@@ -1617,7 +1617,7 @@ $('#menu-button-new-model').click(function () {
     'use strict';
 
     ui.confirm({
-        message: 'Are you sure you want to create a new model and delete the current model? This action is irreversible.',
+        message: 'Are you sure you want to create a new model and delete the current model? This action is ' + '<b>irreversible</b>.' + ' TIP: ' +  '<b>save your current model</b>'+ ' before going through with this action.',
         callback: function (result) {
             if (result === true) {
                 istar.clearModel();

@@ -574,3 +574,7 @@ svg * {
   font-weight: 600;
   font-size: larger;
 }
+
+.underline{
+  text-decoration: underline;
+}
