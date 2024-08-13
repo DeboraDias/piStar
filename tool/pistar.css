@@ -390,6 +390,7 @@ svg * {
   border-radius: 5px; /* rounded edges */
   display: inline-block; /* ensure the element is displayed as a block with padding */
   margin-bottom: 10px; /* space between elements */
+  width: 100%;
   
 }
 
@@ -537,7 +538,7 @@ svg * {
 }
 
 .cell-selection {
-  border: 3px dashed dimgrey;
+  border: 3px dashed #696969;
   /*border: 4px dashed #1C5052;*/
   height: 0;
   pointer-events: none;  /* based on https://stackoverflow.com/questions/3538489/html-css-make-a-div-invisible-to-clicks */
@@ -560,7 +561,7 @@ svg * {
   height: 16px;
   position: absolute; /* absolute positioning to place it inside the container */
   top: 5px; 
-  right: 5px; 
+  right: 3px; 
   background-image: url('app/ui/images/icon-pencil.svg');
   background-size: contain;
   background-repeat: no-repeat;
@@ -575,6 +576,3 @@ svg * {
   font-size: larger;
 }
 
-.underline{
-  text-decoration: underline;
-}

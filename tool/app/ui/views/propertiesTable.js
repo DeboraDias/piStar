@@ -387,11 +387,26 @@ ui.components.PropertiesTableView = Backbone.View.extend({
     setupOptionsPanel: function () {
         'use strict';
 
-        if (this.model.prop('backgroundColor')) {
-            $('#single-element-color-picker').get(0).jscolor.fromString(this.model.prop('backgroundColor'));
-        }
-        else if (ui.getSelectedCells()){
-            $('#single-element-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
+        const colorPickerElement = $('#single-element-color-picker').get(0);
+        const selectedCells = ui.selectedCells ? ui.selectedCells : [];
+
+        if (selectedCells.length === 1 && colorPickerElement) { // Handle a single cell selected
+            if (this.model.prop('backgroundColor')) {
+                colorPickerElement.jscolor.fromString(this.model.prop('backgroundColor'));
+            } else {
+                colorPickerElement.jscolor.fromString(ui.defaultElementBackgroundColor);
+            }
+        } else if (selectedCells.length > 1) { // Handle multiple cells selected
+            // You can choose to hide or disable the color picker when multiple cells are selected
+            console.log("Multiple cells selected. No color picker available.");
+            // Optionally, hide the color picker or display a message
+            $('#subpanel-style').html('<div id="multi-select-message">To edit style, select only one item.</div>');
+        } else {
+            console.log("No cells selected.");
+            // Handle the case when no cells are selected
+            if (colorPickerElement) {
+                colorPickerElement.jscolor.fromString(ui.defaultElementBackgroundColor);
+            }
         }
     },
     addInfo: function (content) {

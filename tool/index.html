@@ -66,6 +66,12 @@ https://github.com/jhcp/pistar
                         Save Model
                     </a>
 
+                    <a class="btn btn-default button-vertical" id="menu-button-generate-report"
+                       title="Generate (download) the report to your computer">
+                        <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span><br>
+                        Generate Report
+                    </a>
+
                     <a class="btn btn-default button-vertical" id="menu-button-load-model" data-toggle="modal" data-target="#modal-load-model"
                        title="Load a previously saved model">
                         <span class="glyphicon glyphicon-floppy-open" aria-hidden="true"></span><br>
@@ -359,8 +365,8 @@ https://github.com/jhcp/pistar
         <th scope="row" class="property-name"><%- propertyName %></th>
         <td class="property-value">
             <a href="#" id="current<%- propertyName %>" class="property-value" data-type="<%- dataType %>" data-pk="1"
-               data-name="<%- propertyName %>" data-title="Enter <%- propertyName %>"><%- propertyValue %></a>
-            <span class="icon-edit"></span> <!-- Icon inside the <td> element but outside the <a> element -->
+               data-name="<%- propertyName %>" data-title="Enter <%- propertyName %>"><%- propertyValue %>
+               <span class="icon-edit"></span></a>
         </td>
         </td>
     </tr>
@@ -596,6 +602,9 @@ https://github.com/jhcp/pistar
 <script src="language/ui.metamodel.js"></script>
 
 <!-- insert your plugin(s) here, after this line -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
 
 <!-- end of plugin(s) area -->
 

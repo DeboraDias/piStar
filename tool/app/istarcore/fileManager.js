@@ -285,6 +285,219 @@ istar.fileManager = function() {
                 return stringifiedModel;
             }
         },
+        generateReport: function () {
+            // Step 1: Extract data from istar.graph
+            const modelJSON = {
+                actors: [],
+                orphans: [],
+                dependencies: [],
+                links: [],
+                display: {},
+                tool: 'pistar.2.1.0',
+                istar: '2.0',
+                saveDate: new Date().toGMTString(),
+                diagram: {
+                    width: istar.paper.getArea().width,
+                    height: istar.paper.getArea().height,
+                    name: istar.graph.prop('name') || '',
+                }
+            };
+
+            function elementToJSON(element) {
+                return {
+                    id: element.id,
+                    text: element.prop('name'),
+                    type: element.prop('type'),
+                    x: element.prop('position/x'),
+                    y: element.prop('position/y'),
+                    customProperties: element.prop('customProperties')
+                };
+            }
+
+            function collectModelData() {
+                _.forEach(istar.graph.getElements(), function (element) {
+                    if (element.isKindOfActor()) {
+                        let actorJSON = elementToJSON(element);
+                        actorJSON.nodes = element.getEmbeddedCells().map(node => elementToJSON(node));
+                        modelJSON.actors.push(actorJSON);
+                    } else if (element.isDependum()) {
+                        let dependency = elementToJSON(element);
+                        dependency.source = istar.graph.getConnectedLinks(element, { inbound: true })[0].attributes.source.id;
+                        dependency.target = istar.graph.getConnectedLinks(element, { outbound: true })[0].attributes.target.id;
+                        modelJSON.dependencies.push(dependency);
+                    } else {
+                        let orphan = elementToJSON(element);
+                        modelJSON.orphans.push(orphan);
+                    }
+                });
+
+                _.forEach(istar.graph.getLinks(), function (link) {
+                    let linkJSON = {
+                        id: link.id,
+                        text: link.prop('name'),
+                        type: link.prop('type'),
+                        source: link.attributes.source.id,
+                        target: link.attributes.target.id,
+                        customProperties: link.prop('customProperties')
+                    };
+                    modelJSON.links.push(linkJSON);
+                });
+            }
+
+            // Step 2: Collect data
+            collectModelData();
+
+            // Step 3: Create a new jsPDF instance
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Step 4: Prepare data for the table
+            const rows = [];
+
+            modelJSON.actors.forEach(actor => {
+                rows.push([actor.text, actor.customProperties?.Description || '', actor.type, '']);
+                actor.nodes.forEach(node => {
+                    rows.push([node.text, node.customProperties?.Description || '', node.type, '']);
+                });
+            });
+
+            modelJSON.dependencies.forEach(dependency => {
+                rows.push([
+                    dependency.text,
+                    dependency.customProperties?.Description || '',
+                    dependency.type,
+                    `Source: ${dependency.source}, Target: ${dependency.target}`
+                ]);
+            });
+
+            modelJSON.orphans.forEach(orphan => {
+                rows.push([orphan.text, orphan.customProperties?.Description || '', orphan.type, '']);
+            });
+
+            modelJSON.links.forEach(link => {
+                rows.push([
+                    link.text,
+                    link.customProperties?.Description || '',
+                    link.type,
+                    `Source: ${link.source}, Target: ${link.target}`
+                ]);
+            });
+
+            // Step 5: Add the table to the PDF
+            doc.autoTable({
+                head: [['Name', 'Description', 'Type', 'Details']],
+                body: rows
+            });
+
+            // Step 6: Save the PDF
+            doc.save('model.pdf');
+        },
+        
+        generateReportForSelection: function (selectedElements) {
+            // Step 1: Extract data from istar.graph
+            const modelJSON = {
+                actors: [],
+                orphans: [],
+                dependencies: [],
+                links: [],
+                display: {},
+                tool: 'pistar.2.1.0',
+                istar: '2.0',
+                saveDate: new Date().toGMTString(),
+                diagram: {
+                    width: istar.paper.getArea().width,
+                    height: istar.paper.getArea().height,
+                    name: istar.graph.prop('name') || '',
+                }
+            };
+        
+            function elementToJSON(element) {
+                return {
+                    id: element.id,
+                    text: element.prop('name'),
+                    type: element.prop('type'),
+                    x: element.prop('position/x'),
+                    y: element.prop('position/y'),
+                    customProperties: element.prop('customProperties')
+                };
+            }
+        
+            function collectSelectedModelData() {
+                selectedElements.forEach(function (element) {
+                    if (element.isKindOfActor()) {
+                        let actorJSON = elementToJSON(element);
+                        actorJSON.nodes = element.getEmbeddedCells().map(node => elementToJSON(node));
+                        modelJSON.actors.push(actorJSON);
+                    } else if (element.isDependum()) {
+                        let dependency = elementToJSON(element);
+                        dependency.source = istar.graph.getConnectedLinks(element, { inbound: true })[0]?.attributes.source.id || '';
+                        dependency.target = istar.graph.getConnectedLinks(element, { outbound: true })[0]?.attributes.target.id || '';
+                        modelJSON.dependencies.push(dependency);
+                    } else if (element.isLink()) {
+                        let linkJSON = {
+                            id: element.id,
+                            text: element.prop('name'),
+                            type: element.prop('type'),
+                            source: element.attributes.source.id,
+                            target: element.attributes.target.id,
+                            customProperties: element.prop('customProperties')
+                        };
+                        modelJSON.links.push(linkJSON);
+                    } else {
+                        let orphan = elementToJSON(element);
+                        modelJSON.orphans.push(orphan);
+                    }
+                });
+            }
+        
+            // Step 2: Collect data for the selected elements
+            collectSelectedModelData();
+        
+            // Step 3: Create a new jsPDF instance
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+        
+            // Step 4: Prepare data for the table
+            const rows = [];
+        
+            modelJSON.actors.forEach(actor => {
+                rows.push([actor.text, actor.customProperties?.Description || '', actor.type, '']);
+                actor.nodes.forEach(node => {
+                    rows.push([node.text, node.customProperties?.Description || '', node.type, '']);
+                });
+            });
+        
+            modelJSON.dependencies.forEach(dependency => {
+                rows.push([
+                    dependency.text,
+                    dependency.customProperties?.Description || '',
+                    dependency.type,
+                    `Source: ${dependency.source}, Target: ${dependency.target}`
+                ]);
+            });
+        
+            modelJSON.orphans.forEach(orphan => {
+                rows.push([orphan.text, orphan.customProperties?.Description || '', orphan.type, '']);
+            });
+        
+            modelJSON.links.forEach(link => {
+                rows.push([
+                    link.text,
+                    link.customProperties?.Description || '',
+                    link.type,
+                    `Source: ${link.source}, Target: ${link.target}`
+                ]);
+            });
+        
+            // Step 5: Add the table to the PDF
+            doc.autoTable({
+                head: [['Name', 'Description', 'Type', 'Details']],
+                body: rows
+            });
+        
+            // Step 6: Save the PDF
+            doc.save('selected_model.pdf');
+        },
         loadModel: function (inputRaw) {
             if (inputRaw) {
                 invalidMessages = [];
