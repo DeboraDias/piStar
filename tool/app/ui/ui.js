@@ -105,7 +105,7 @@ var ui = function () {
                 return _.size(this.getSelectedCells());
             }
         },
-        selectCell: function(cell) {
+        selectCell: function (cell) {
             if (cell) {
                 var toTrigger = false;
                 if (this.selectedCell && this.selectedCell !== cell) {
@@ -120,7 +120,7 @@ var ui = function () {
                 this.selectedCell = cell;
 
                 if (toTrigger) {
-                    istar.paper.trigger('change:selection', {selectedCell: cell});
+                    istar.paper.trigger('change:selection', { selectedCell: cell });
                 }
                 if (cell.isElement()) {
                     $('#sidepanel-tab-style').show();
@@ -130,20 +130,20 @@ var ui = function () {
                 }
             }
         },
-        deselectCell: function(_cell) {
+        deselectCell: function (_cell) {
             var cell = _cell || ui.selectedCell;
             if (cell) {
                 //actual selection change
                 this.selectedCell = null;
 
-                istar.paper.trigger('change:selection', {deselectedCell: cell});
+                istar.paper.trigger('change:selection', { deselectedCell: cell });
             }
         },
-        selectPaper: function() {
+        selectPaper: function () {
             if (this.selectedCell !== istar.graph) {
                 this.deselectCell();
                 this.selectedCell = istar.graph;
-                istar.paper.trigger('change:selection', {selectedCell: istar.graph});
+                istar.paper.trigger('change:selection', { selectedCell: istar.graph });
 
                 //closes any color picker that may be open
                 $('.jscolor').each(function () {
@@ -154,28 +154,33 @@ var ui = function () {
                 $('#sidepanel-tab-properties a').tab('show');
             }
         },
-        hideSelection: function() {
+        hideSelection: function () {
             $('#resize-handle').hide();
             $('.cell-selection').hide();
         },
-        showSelection: function(_cell) {
+        showSelection: function (_cell) {
             var cell = _cell || this.selectedCell;
             var cellView = istar.paper.findViewByModel(cell);
             if (cellView) {
                 var cellBox = cellView.getBBox();
+                // Applying consistent offset calculations
+                var leftPosition = cellBox.x + offsetX - 4;
+                var topPosition = cellBox.y + offsetY + 10;
 
-                //positioning and display of the selection box
+                // Correct positioning of the selection box
                 $('.cell-selection').css({
-                    left: cellBox.x-6 + 'px',
-                    top: cellBox.y-6 + 'px',
+                    left: leftPosition + 'px',
+                    top: topPosition + 'px',
                     width: (cellBox.width + 12.5) + 'px',
                     height: (cellBox.height + 12) + 'px'
                 });
                 $('.cell-selection').show();
-
                 //positioning and display of the resizing handle, when applicable
-                if (cellView.model.isElement() && (! cellView.model.isKindOfActor()) ) {
-                    $('#resize-handle').css({left: cellBox.x - 2 + cellBox.width, top: cellBox.y - 2 + cellBox.height});
+                if (cellView.model.isElement() && (!cellView.model.isKindOfActor())) {
+                    $('#resize-handle').css({
+                        left: cellBox.x - 2 + cellBox.width,
+                        top: cellBox.y - 2 + cellBox.height
+                    });
                     $('#resize-handle').show();
                 }
             }
@@ -184,41 +189,27 @@ var ui = function () {
             // Clear any existing selection boxes
             $('.cell-selection').remove();
             if (this.selectedCells.length == 0) {
-                var cell = this.selectedCell;
-                var cellView = istar.paper.findViewByModel(cell);
-                if (cellView) {
-                    var cellBox = cellView.getBBox();
-
-                    // Create and position the selection box
-                    var selectionBox = $('<div class="cell-selection"></div>').css({
-                        position: 'absolute',
-                        border: '3px dashed rgb(105, 105, 105)',
-                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                        left: cellBox.x + 500 + 'px',
-                        top: cellBox.y + 104 + 'px',
-                        width: (cellBox.width + 12.5) + 'px',
-                        height: (cellBox.height + 12) + 'px'
-                    });
-                    $('body').append(selectionBox);
-                }
+                this.showSelection();
             } else {
                 this.selectedCells.forEach(cell => {
                     var cellView = istar.paper.findViewByModel(cell);
                     if (cellView) {
                         var cellBox = cellView.getBBox();
+                        // Applying consistent offset calculations
+                        var leftPosition = cellBox.x + offsetX - 4;
+                        var topPosition = cellBox.y + offsetY + 10;
 
-                        // Create and position the selection box for each selected cell
+                        // Correct positioning of each selection box
                         var selectionBox = $('<div class="cell-selection"></div>').css({
                             position: 'absolute',
                             border: '3px dashed rgb(105, 105, 105)',
                             backgroundColor: 'rgba(0, 0, 0, 0)',
-                            left: cellBox.x + 298 + 'px',
-                            top: cellBox.y + 104 + 'px',
+                            left: leftPosition + 'px',
+                            top: topPosition + 'px',
                             width: (cellBox.width + 12.5) + 'px',
                             height: (cellBox.height + 12) + 'px'
                         });
                         $('body').append(selectionBox);
-
                     }
                 });
             }
@@ -232,7 +223,7 @@ var ui = function () {
             cells.forEach(cell => ui.selectCell(cell));
         },
         deselectAllCells: function () {
-            
+
             this.selectedCells.forEach(cell => {
                 istar.paper.trigger('change:selection', { deselectedCell: cell });
             });
@@ -260,44 +251,78 @@ let offsetX = initialOffsetX;
 let offsetY = initialOffsetY;
 
 function updateOffsets() {
-    // Get current viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Recalculate the offsets based on the current viewport size
     offsetX = viewportWidth * proportionX;
     offsetY = viewportHeight * proportionY;
+
+    $('.cell-selection').each(function () {
+        const selectionBox = $(this);
+        const originalLeft = parseFloat(selectionBox.data('original-left'));
+        const originalTop = parseFloat(selectionBox.data('original-top'));
+
+        selectionBox.css({
+            left: originalLeft + offsetX + 'px',
+            top: originalTop + offsetY + 'px'
+        });
+    });
 }
 
-// Initial calculation
+function saveOriginalPosition(selectionBox, left, top) {
+    selectionBox.data('original-left', left);
+    selectionBox.data('original-top', top);
+}
+
 updateOffsets();
 
-// Update offsets on window resize
-window.addEventListener('resize', updateOffsets);
+
+window.addEventListener('resize', function () {
+    updateOffsets();
+    if (ui.selectedCells.length == 0) {
+        const selectedElement = selection[0];
+        updateColorPicker(selectedElement);
+        ui.showSelection()
+    } else ui.showSelection2();
+});
+
+
 
 var dragStart = null;
 var selectionBox = null;
+let firstInteraction = true;
 document.addEventListener('mousedown', function (event) {
-
+    if (firstInteraction) {
+        updateOffsets();
+        firstInteraction = false;
+    }
     if (event.target.closest('#out')) {
-        console.log("In the out part");
-        console.log(ui.selectedCells);
         ui.selectedCells = [];
 
-        if (event.target.id === 'resize-handle') { // Adjust the condition to match your resize handle
+        if (event.target.id === 'resize-handle') {
             ui.isResizing = true;
         } else {
             ui.isResizing = false;
-            ui.deselectAllCells();
+            //NOVO
+            // Check if the Ctrl or Command key is pressed
+            const isCtrlOrCommandPressed = event.ctrlKey || event.metaKey;
+
+            // If Ctrl or Command is not pressed, deselect all cells
+            if (!isCtrlOrCommandPressed) {
+                ui.deselectAllCells();
+                ui.selectedCells = [];
+            }
+            //NOVO ATÉ AQUI
+            //ui.deselectAllCells();
             updateOffsets(); // Ensure offsets are up-to-date
-    
+
             dragStart = { x: event.pageX - offsetX, y: event.pageY - offsetY };
             selectionBox = document.createElement('div');
             selectionBox.style.position = 'absolute';
             selectionBox.style.border = '3px dashed rgb(105, 105, 105)';
             selectionBox.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
             document.body.appendChild(selectionBox);
-    
+
             ui.hideSelection();
         }
 
@@ -326,7 +351,7 @@ document.addEventListener('mouseup', function (event) {
     if (dragStart && !ui.isResizing) {
         const dragEnd = { x: event.pageX - offsetX, y: event.pageY - offsetY };
         //If we dont have a rectangle, we dont move to the next part
-        if(!(dragStart.x == dragEnd.x && dragStart.y == dragEnd.y)) {
+        if (!(dragStart.x == dragEnd.x && dragStart.y == dragEnd.y)) {
             var aux = selectCellsInRectangle(dragStart, dragEnd);
             document.body.removeChild(selectionBox);
             dragStart = null;
@@ -362,15 +387,15 @@ function selectCellsInRectangle(start, end) {
             cellBox.y >= Math.min(start.y, end.y) &&
             cellBox.y + cellBox.height <= Math.max(start.y, end.y));
     });
-    console.log(`auxSelectedCells: ${auxSelectedCells}`)
+
     ui.selectedCells = auxSelectedCells;
     ui.selectCells(auxSelectedCells);
 
-    if(ui.selectedCells.length == 0){
+    if (ui.selectedCells.length == 0) {
         ui.showSelection()
     } else ui.showSelection2();  // Highlight all selected cells
 
-    if(ui.selectedCells.length >1) {
+    if (ui.selectedCells.length > 1) {
         updateSidePanel();
     }
 
@@ -387,12 +412,12 @@ function updateSidePanel() {
     const stylePanelTitle = document.querySelector('#subpanel-style .sidepanel-title');
     const stylePanelGroup = document.querySelector('#subpanel-style .group');
     const stylePanel = document.getElementById('subpanel-style');
-    
-    propertiesTable.innerHTML = `<tr><td colspan="2">To see properties, select only one item.</td></tr>`;
-    actionsDiv.innerHTML = `<button id="generate-report" class="btn btn-primary">Generate Report</button>`;
+
+    propertiesTable.innerHTML = '<tr><td colspan="2">To see properties, select only one item.</td></tr>';
+    actionsDiv.innerHTML = '<button id="generate-report" class="btn btn-primary">Generate Report</button>';
     addPropertyButton.style.display = 'none';
 
-    document.getElementById('generate-report').onclick = function() {
+    document.getElementById('generate-report').onclick = function () {
         generateReport(ui.selectedCells);
     };;
 
@@ -409,7 +434,7 @@ function updateSidePanel() {
     if (stylePanel) {
         const existingMessage = document.getElementById('multi-select-message');
         if (!existingMessage) { // Avoid adding multiple messages
-            stylePanel.innerHTML += `<div id="multi-select-message">To edit style, select only one item.</div>`;
+            stylePanel.innerHTML += '<div id="multi-select-message">To edit style, select only one item.</div>';
         }
     }
 }
@@ -418,15 +443,121 @@ function generateReport(selectedItems) {
     istar.fileManager.generateReportForSelection(selectedItems);
 }
 
-// Add event listener to "Generate Report" button
-// document.addEventListener('click', function(event) {
-//     if (event.target && event.target.id === 'generate-report') {
-//         const selectedItems = getSelectedItems(); // Implement this to return the currently selected items
-//         generateReport(selectedItems);
+// document.addEventListener('click', function (event) {
+//     const targetCell = event.target.closest('#out'); // Replace '.cell-class' with the actual class or selector for your cells
+
+//     const currentX = event.pageX;
+//     const currentY = event.pageY;
+//     const clickedCell = findClickedCell(currentX, currentY);
+
+//     if (targetCell) {
+//         const isCtrlOrCommandPressed = event.ctrlKey || event.metaKey;
+//         if (isCtrlOrCommandPressed) {
+
+//             if (clickedCell) {
+//                 console.log('Clicked cell:', clickedCell);
+//                 // Handle the cell selection logic here
+//             } else {
+//                 console.log('No cell was clicked.');
+//                 // Handle clicks outside any cell
+//             }
+
+//             // if (!ui.selectedCells.includes(cellId)) {
+//             //     ui.selectedCells.push(cellId);
+//             // } else {
+//             //     // If the cell is already selected, deselect it (toggle selection)
+//             //     ui.selectedCells = ui.selectedCells.filter(id => id !== cellId);
+//             // }
+//         } else {
+//             // If Ctrl or Command is not pressed, select only the clicked cell
+//             ui.deselectAllCells();
+//             const cellId = targetCell.getAttribute('data-cell-id');
+//             ui.selectedCells = [cellId];
+//         }
+
+//         // Update the side panel based on the current selection
+//         updateSidePanel();
 //     }
 // });
 
-/*-----------------------------------------------------------------------------------------*/
+
+document.addEventListener('click', function (event) {
+    const clickedCell = findClickedCell(event.pageX, event.pageY);
+
+    const isCtrlOrCommandPressed = event.ctrlKey || event.metaKey;
+    if (isCtrlOrCommandPressed) {
+
+        if (clickedCell) {
+            console.log('Clicked cell:', clickedCell);
+            // Handle the cell selection logic here
+        } else {
+            console.log('No cell was clicked.');
+            // Handle clicks outside any cell
+        }
+
+        // Update the side panel based on the current selection
+        updateSidePanel();
+    };
+});
+
+function updateColorPicker(selectedElement) {
+    const colorPickerElement = document.getElementById('single-element-color-picker');
+
+    if (colorPickerElement && colorPickerElement.jscolor) {
+        const elementColor = selectedElement.attr('.element/fill') || '#E6E6E6';
+        colorPickerElement.jscolor.fromString(elementColor);
+    } else {
+        console.warn('Color picker element or jscolor object is not available.');
+    }
+}
+
+function findClickedCell(clickX, clickY) {
+    const cells = ui.getAllCells(); // Assuming there's a method that returns all cells
+    let clickedCell = null;
+
+    // Ensure ui.selectedCells is initialized
+    if (!Array.isArray(ui.selectedCells)) {
+        ui.selectedCells = [];
+    }
+
+    // Adjust the click position by applying the offset
+    const adjustedClickX = clickX - offsetX;
+    const adjustedClickY = clickY - offsetY;
+
+    cells.forEach(cell => {
+        const bbox = getBBox(cell.attributes);
+
+        const cellLeft = bbox.x;
+        const cellRight = cellLeft + bbox.width;
+        const cellTop = bbox.y;
+        const cellBottom = cellTop + bbox.height;
+
+        // Check if the adjusted click position is within the bounds of this cell
+        if (adjustedClickX >= cellLeft && adjustedClickX <= cellRight && adjustedClickY >= cellTop && adjustedClickY <= cellBottom) {
+
+            clickedCell = cell;
+
+        }
+    })
+
+    if (clickedCell) {
+        const cellIndex = ui.selectedCells.indexOf(clickedCell);
+
+        if (cellIndex === -1) {
+            // Cell is not already selected, add it to the selectedCells array
+            ui.selectedCells.push(clickedCell);
+        } else {
+            // Cell is already selected, remove it from the selectedCells array
+            ui.selectedCells.splice(cellIndex, 1);
+        }
+
+        // Update the selection visualization (if any)
+        ui.selectCells(ui.selectedCells);
+    }
+
+    return clickedCell;
+}
+
 ui.defineInteractions = function () {
     'use strict';
 
@@ -483,7 +614,7 @@ ui.defineInteractions = function () {
         linkView.model.attr('connection-wrap/stroke', 'rgba(190, 190, 190, 0)');
     });
 
-   istar.paper.on('change:selection', function (selection) {
+    istar.paper.on('change:selection', function (selection) {
         if (selection.selectedCell) {
             ui.table = new ui.components.PropertiesTableView({ model: selection.selectedCell }).render();
             if (selection.selectedCellView) {
@@ -497,7 +628,7 @@ ui.defineInteractions = function () {
             $('#cell-buttons').html('');
         }
     });
-    
+
 
     istar.paper.on('blank:pointerdown', function (_evt, x, y) {
         //programatically remove focus from any active input, since JointJS prevents this default behavior
@@ -648,7 +779,19 @@ ui.defineInteractions = function () {
             $('input:focus').blur();
         }
 
-        //prevents the selection to appear while the element is being moved
+        // Check if clicked on an item inside an actor or agent
+        var clickedInnerItem = findClickedCell(_evt.pageX, _evt.pageY);
+
+        if (clickedInnerItem && clickedInnerItem !== cellView.model) {
+            ui.selectCell(clickedInnerItem);
+        } else {
+            // Select the current cell if no inner item is clicked
+            ui.selectCell(cellView.model, cellView);
+        }
+        // Programatically remove focus from any active input, since JointJS prevents this default behavior
+        $('input:focus').blur();
+
+        // Prevent selection to appear while the element is being moved
         if (ui.getSelectedCells()[0].isElement()) {
             ui.hideSelection();
         }
@@ -1743,10 +1886,7 @@ ui.setupElementResizing = function () {
 
     ui.resizeElement = function (element, width, height) {
         element.resize(width, height);
-
-        
         ui.showSelection(ui.getSelectedCells()[0]);
-
         element.updateLineBreak();  // Update the line break on the element's label
     };
 
@@ -2027,3 +2167,4 @@ istar.undoManager.callback = function (empty) {
 
 /*definition of globals to prevent undue JSHint warnings*/
 /*globals istar:false, console:false, $:false, _:false, joint:false, uiC:false, bootbox:false */
+

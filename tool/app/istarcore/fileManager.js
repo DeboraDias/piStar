@@ -291,7 +291,6 @@ istar.fileManager = function() {
                 actors: [],
                 orphans: [],
                 dependencies: [],
-                links: [],
                 display: {},
                 tool: 'pistar.2.1.0',
                 istar: '2.0',
@@ -331,17 +330,7 @@ istar.fileManager = function() {
                     }
                 });
 
-                _.forEach(istar.graph.getLinks(), function (link) {
-                    let linkJSON = {
-                        id: link.id,
-                        text: link.prop('name'),
-                        type: link.prop('type'),
-                        source: link.attributes.source.id,
-                        target: link.attributes.target.id,
-                        customProperties: link.prop('customProperties')
-                    };
-                    modelJSON.links.push(linkJSON);
-                });
+              
             }
 
             // Step 2: Collect data
@@ -374,18 +363,9 @@ istar.fileManager = function() {
                 rows.push([orphan.text, orphan.customProperties?.Description || '', orphan.type, '']);
             });
 
-            modelJSON.links.forEach(link => {
-                rows.push([
-                    link.text,
-                    link.customProperties?.Description || '',
-                    link.type,
-                    `Source: ${link.source}, Target: ${link.target}`
-                ]);
-            });
-
             // Step 5: Add the table to the PDF
             doc.autoTable({
-                head: [['Name', 'Description', 'Type', 'Details']],
+                head: [['Name', 'Description', 'Type']],
                 body: rows
             });
 
@@ -399,7 +379,6 @@ istar.fileManager = function() {
                 actors: [],
                 orphans: [],
                 dependencies: [],
-                links: [],
                 display: {},
                 tool: 'pistar.2.1.0',
                 istar: '2.0',
@@ -433,16 +412,6 @@ istar.fileManager = function() {
                         dependency.source = istar.graph.getConnectedLinks(element, { inbound: true })[0]?.attributes.source.id || '';
                         dependency.target = istar.graph.getConnectedLinks(element, { outbound: true })[0]?.attributes.target.id || '';
                         modelJSON.dependencies.push(dependency);
-                    } else if (element.isLink()) {
-                        let linkJSON = {
-                            id: element.id,
-                            text: element.prop('name'),
-                            type: element.prop('type'),
-                            source: element.attributes.source.id,
-                            target: element.attributes.target.id,
-                            customProperties: element.prop('customProperties')
-                        };
-                        modelJSON.links.push(linkJSON);
                     } else {
                         let orphan = elementToJSON(element);
                         modelJSON.orphans.push(orphan);
@@ -480,18 +449,9 @@ istar.fileManager = function() {
                 rows.push([orphan.text, orphan.customProperties?.Description || '', orphan.type, '']);
             });
         
-            modelJSON.links.forEach(link => {
-                rows.push([
-                    link.text,
-                    link.customProperties?.Description || '',
-                    link.type,
-                    `Source: ${link.source}, Target: ${link.target}`
-                ]);
-            });
-        
             // Step 5: Add the table to the PDF
             doc.autoTable({
-                head: [['Name', 'Description', 'Type', 'Details']],
+                head: [['Name', 'Description', 'Type']],
                 body: rows
             });
         
