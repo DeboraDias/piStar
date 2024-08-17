@@ -145,11 +145,11 @@ var ui = function () {
                 this.selectedCell = istar.graph;
                 istar.paper.trigger('change:selection', { selectedCell: istar.graph });
 
-                 // Close any color picker that may be open, if jscolor is defined
+                // Close any color picker that may be open, if jscolor is defined
                 $('.jscolor').each(function () {
                     if (this.jscolor && typeof this.jscolor.hide === 'function') {
                         this.jscolor.hide();
-                }
+                    }
                 });
 
                 $('#sidepanel-tab-style').hide();
@@ -242,7 +242,7 @@ const diagramElement = document.getElementById("diagram");
 diagramElement.style.position = "relative";
 
 document.addEventListener('mousedown', function (event) {
-     
+
     if (event.target.closest('#out')) {
         const cellView = istar.paper.findView(event.target);
 
@@ -336,7 +336,7 @@ document.addEventListener('mouseup', function (event) {
                 selectionBox.style.height = `${bbox.height + 12}px`;
 
                 selectionBox.setAttribute('data-cell-id', cell.id);
-              
+
                 diagramElement.appendChild(selectionBox);
 
                 updateSidePanel();
@@ -379,7 +379,27 @@ function updateSidePanel() {
     const stylePanel = document.getElementById('subpanel-style');
 
     propertiesTable.innerHTML = '<tr><td colspan="2">To see properties, select only one item.</td></tr>';
-    actionsDiv.innerHTML = '<button id="generate-report" class="btn btn-primary">Generate Report</button>';
+    actionsDiv.innerHTML = '';
+    actionsDiv.innerHTML += '<button id="generate-report" class="btn btn-rep btn-default btn-xs button-horizontal">Generate Report</button><br>';
+    /*  actionsDiv.innerHTML += '<button id="delete-element-button1" class="btn btn-delete btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'; */
+    $('#cell-actions').append(
+        '<a id="delete-elements-button" class="btn btn-delete btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'
+    );
+    $('#delete-elements-button').click(function (e) {
+        const selectedCells = ui.selectedCells;
+        if (selectedCells && selectedCells.length > 0) {
+            console.log('array size:' + selectedCells.length);
+            console.log(selectedCells);
+            selectedCells.forEach(cell => {
+                console.log('going to delete ' + cell.attributes.name);
+                ui.selectedCell = cell;
+                ui.deleteCell(cell);
+                console.log(`selected cells after deletion ${ui.selectedCells}`);
+            });
+            ui.selectPaper(); // Deselect everything after deletion
+        }
+        ui.collectActionData('click', e.currentTarget.id);
+    });
     addPropertyButton.style.display = 'none';
 
     document.getElementById('generate-report').onclick = function () {
@@ -1468,6 +1488,7 @@ ui.changeAddMenuStatus = function (text) {
 };
 
 ui.deleteCell = function (cellToDelete) {
+    console.log('came in to delete ' + cellToDelete.attributes.name);
     function getDependencyFromDependencyLink(link) {
         let dependum = null;
         if (link.getSourceElement() && link.getSourceElement().isDependum()) {

@@ -576,3 +576,12 @@ svg * {
   font-size: larger;
 }
 
+.btn-rep{
+  border-style: solid;
+  background-color: #ffffff;
+  color: #177bc3;
+  font-weight: 300;
+  font-size:larger;
+  border-radius: 5px;
+}
+
