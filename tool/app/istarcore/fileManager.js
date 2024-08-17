@@ -369,7 +369,7 @@ istar.fileManager = function() {
                 body: rows
             });
 
-            // Step 6: Save the PDF
+
             doc.save('model.pdf');
         },
         
