@@ -118,7 +118,7 @@ var ui = function () {
 
                 //actual selection change
                 this.selectedCell = cell;
-                
+
                 if (toTrigger) {
                     istar.paper.trigger('change:selection', { selectedCell: cell });
                 }
@@ -145,9 +145,11 @@ var ui = function () {
                 this.selectedCell = istar.graph;
                 istar.paper.trigger('change:selection', { selectedCell: istar.graph });
 
-                //closes any color picker that may be open
+                 // Close any color picker that may be open, if jscolor is defined
                 $('.jscolor').each(function () {
-                    this.jscolor.hide();
+                    if (this.jscolor && typeof this.jscolor.hide === 'function') {
+                        this.jscolor.hide();
+                }
                 });
 
                 $('#sidepanel-tab-style').hide();
@@ -240,7 +242,21 @@ const diagramElement = document.getElementById("diagram");
 diagramElement.style.position = "relative";
 
 document.addEventListener('mousedown', function (event) {
+     
     if (event.target.closest('#out')) {
+        const cellView = istar.paper.findView(event.target);
+
+        // If the click occurred on a cell, don't start the drag selection
+        if (cellView) {
+            ui.selectedCells = [];
+            ui.selectCell(cellView.model);  // Select the clicked cell
+            dragStart = false;  // Prevent the selection box logic
+            // Hide the selection box when starting to move a cell
+            ui.hideSelection();
+            return;  // Exit the function to avoid starting the selection box
+        }
+
+        // Proceed with the selection box logic if not clicking on a cell
         ui.selectedCells = [];
 
         if (event.target.id === 'resize-handle') {
@@ -248,7 +264,7 @@ document.addEventListener('mousedown', function (event) {
         } else {
             ui.isResizing = false;
             isSelecting = true;
-            
+
             const diagramRect = diagramElement.getBoundingClientRect();
             startX = event.clientX - diagramRect.left;
             startY = event.clientY - diagramRect.top;
@@ -259,7 +275,7 @@ document.addEventListener('mousedown', function (event) {
             selectionBox = document.createElement("div");
             selectionBox.classList.add("selection-box");
             selectionBox.style.position = "absolute";
-            selectionBox.style.border = "3px dashed #000";
+            selectionBox.style.border = "3px dashed rgb(105, 105, 105)";
             selectionBox.style.background = "rgba(0, 0, 0, 0.1)";
             selectionBox.style.left = `${startX}px`;
             selectionBox.style.top = `${startY}px`;
@@ -288,17 +304,9 @@ document.addEventListener('mouseup', function (event) {
         isSelecting = false;
         selectionBox.style.display = "none";
 
-        //debug
-        if(Array.isArray(ui.selectedCells)){
-            console.log(ui.selectedCells.length);
-        } else{
-            console.log('not an array');
-        }
-
         const boxRect = getSelectionBBox(startX, startY, currentX, currentY);
         diagramElement.removeChild(selectionBox);
 
-        const selectedCells = [];
         istar.graph.getElements().forEach(function (cell) {
             const bbox = cell.getBBox();
             const cellRect = {
@@ -315,29 +323,42 @@ document.addEventListener('mouseup', function (event) {
                 cellRect.top >= boxRect.top &&
                 cellRect.bottom <= boxRect.bottom
             ) {
-                selectedCells.push(cell);
-                // Apply a visual indicator for the selected cell
-                cell.attr(".element", { stroke: "blue", "stroke-width": 2 });
+                ui.selectedCells.push(cell);
+                // Apply the same dashed-line selection box as single selection
+                var selectionBox = document.createElement("div");
+                selectionBox.classList.add("cell-selection");
+                selectionBox.style.position = "absolute";
+                selectionBox.style.border = "3px dashed rgb(105, 105, 105)";
+                selectionBox.style.background = "rgba(0, 0, 0, 0)";
+                selectionBox.style.left = `${cellRect.left - 6}px`;
+                selectionBox.style.top = `${cellRect.top - 6}px`;
+                selectionBox.style.width = `${bbox.width + 12.5}px`;
+                selectionBox.style.height = `${bbox.height + 12}px`;
+
+                selectionBox.setAttribute('data-cell-id', cell.id);
+              
+                diagramElement.appendChild(selectionBox);
+
                 updateSidePanel();
             } else {
                 // Optionally, remove the visual indicator if the cell is not selected
                 cell.attr(".element", { stroke: "black", "stroke-width": 1 });
             }
-        }); 
-        
-    } 
+        });
+
+    }
 });
 
 function getSelectionBBox(startX, startY, currentX, currentY) {
     return {
-      left: Math.min(startX, currentX),
-      top: Math.min(startY, currentY),
-      right: Math.max(startX, currentX),
-      bottom: Math.max(startY, currentY),
-      width: Math.abs(currentX - startX),
-      height: Math.abs(currentY - startY),
+        left: Math.min(startX, currentX),
+        top: Math.min(startY, currentY),
+        right: Math.max(startX, currentX),
+        bottom: Math.max(startY, currentY),
+        width: Math.abs(currentX - startX),
+        height: Math.abs(currentY - startY),
     };
-  }
+}
 
 function getBBox(cell) {
     return {
@@ -347,34 +368,6 @@ function getBBox(cell) {
         height: cell.size.height
     };
 }
-
-/* function selectCellsInRectangle(start, end) {
-    const cells = ui.getAllCells();
-
-    // Filter and return cells that are inside the rectangle
-    var auxSelectedCells = cells.filter(cell => {
-        const cellBox = getBBox(cell.attributes);
-        return (cellBox.x >= Math.min(start.x, end.x) &&
-            cellBox.x + cellBox.width <= Math.max(start.x, end.x) &&
-            cellBox.y >= Math.min(start.y, end.y) &&
-            cellBox.y + cellBox.height <= Math.max(start.y, end.y));
-    });
-
-    ui.selectedCells = auxSelectedCells;
-    ui.selectCells(auxSelectedCells);
-
-    if (ui.selectedCells.length == 0) {
-        ui.showSelection()
-    } else ui.showSelection2();  // Highlight all selected cells
-
-    if (ui.selectedCells.length > 1) {
-        updateSidePanel();
-    }
-
-    return auxSelectedCells;
-} */
-
-/*-----------------------------------------------------------------------------------------*/
 
 function updateSidePanel() {
     const propertiesTable = document.getElementById('properties-table');
@@ -870,1185 +863,1185 @@ ui.defineInteractions = function () {
         }
     }
 };
-    ui.addElementOnPaper = function (options) {
-        'use strict';
+ui.addElementOnPaper = function (options) {
+    'use strict';
 
-        try {
-            var currentAddingElement = ui.states.editor.ADDING.data.typeNameToAdd;
-            var isValid = { isValid: false };
-            if (ui.states.editor.isAddingNode()) {
-                if (istar.metamodel.nodes[currentAddingElement]) {
-                    if (istar.metamodel.nodes[currentAddingElement].canBeOnPaper) {
-                        isValid = istar.metamodel.nodes[currentAddingElement].isValid();
-                    }
-                    else {
-                        isValid = {
-                            message: 'a ' + currentAddingElement + ' cannot be added directly to the paper, it must be added <b>inside</b> an Actor.'
-                        };
-                        if (istar.metamodel.nodes[currentAddingElement].canBeDependum) {
-                            isValid.message += '<br><br>If you are trying to add a dependency link, please try the "Dependency..." button';
-                        }
-                    }
-                }
-            }
-            else if (ui.states.editor.isAddingContainer()) {
-                if (istar.metamodel.containers[currentAddingElement]) {
-                    isValid = istar.metamodel.containers[currentAddingElement].isValid();
-                }
-            }
-
-            if (isValid.isValid) {
-                var newActor = istar['add' + currentAddingElement]('', options);
-                if (istar.metamodel.nodes[currentAddingElement] && istar.metamodel.nodes[currentAddingElement].customProperties) {
-                    newActor.prop('customProperties', istar.metamodel.nodes[currentAddingElement].customProperties);
-                }
-                else if (istar.metamodel.containers[currentAddingElement] && istar.metamodel.containers[currentAddingElement].customProperties) {
-                    newActor.prop('customProperties', istar.metamodel.containers[currentAddingElement].customProperties);
-                }
-                newActor.prop('customProperties/Description', '');
-                istar.resizePaperBasedOnCell(newActor);
-                ui.selectCell(newActor);
-            }
-            else {
-                ui.displayInvalidLinkMessage(isValid.message);
-            }
-        } catch (e) {
-            console.log(e);
-        } finally {
-            ui.states.editor.ADDING.data.button.end();
-        }
-    };
-
-    ui.addElementOnContainer = function (cellView, options) {
-        'use strict';
-
-        try {
-            var currentAddingElement = ui.states.editor.ADDING.data.typeNameToAdd;
-            var isValid = { isValid: false };
+    try {
+        var currentAddingElement = ui.states.editor.ADDING.data.typeNameToAdd;
+        var isValid = { isValid: false };
+        if (ui.states.editor.isAddingNode()) {
             if (istar.metamodel.nodes[currentAddingElement]) {
-                if (istar.metamodel.nodes[currentAddingElement].canBeInnerElement) {
-                    isValid = istar.metamodel.nodes[currentAddingElement].isValid(cellView.model);
+                if (istar.metamodel.nodes[currentAddingElement].canBeOnPaper) {
+                    isValid = istar.metamodel.nodes[currentAddingElement].isValid();
                 }
                 else {
                     isValid = {
-                        message: 'a ' + currentAddingElement + ' cannot be added inside an actor'
+                        message: 'a ' + currentAddingElement + ' cannot be added directly to the paper, it must be added <b>inside</b> an Actor.'
                     };
+                    if (istar.metamodel.nodes[currentAddingElement].canBeDependum) {
+                        isValid.message += '<br><br>If you are trying to add a dependency link, please try the "Dependency..." button';
+                    }
                 }
             }
+        }
+        else if (ui.states.editor.isAddingContainer()) {
+            if (istar.metamodel.containers[currentAddingElement]) {
+                isValid = istar.metamodel.containers[currentAddingElement].isValid();
+            }
+        }
 
-            if (isValid.isValid) {
-                //centers the position
-                var bbox = (new istar.metamodel.nodes[currentAddingElement].shapeObject()).getBBox();
-                options.position.x -= bbox.width / 2;
-                options.position.y -= bbox.height / 2;
+        if (isValid.isValid) {
+            var newActor = istar['add' + currentAddingElement]('', options);
+            if (istar.metamodel.nodes[currentAddingElement] && istar.metamodel.nodes[currentAddingElement].customProperties) {
+                newActor.prop('customProperties', istar.metamodel.nodes[currentAddingElement].customProperties);
+            }
+            else if (istar.metamodel.containers[currentAddingElement] && istar.metamodel.containers[currentAddingElement].customProperties) {
+                newActor.prop('customProperties', istar.metamodel.containers[currentAddingElement].customProperties);
+            }
+            newActor.prop('customProperties/Description', '');
+            istar.resizePaperBasedOnCell(newActor);
+            ui.selectCell(newActor);
+        }
+        else {
+            ui.displayInvalidLinkMessage(isValid.message);
+        }
+    } catch (e) {
+        console.log(e);
+    } finally {
+        ui.states.editor.ADDING.data.button.end();
+    }
+};
 
-                var element = ui.addNodeInPlace(cellView.model, istar['add' + currentAddingElement], options);
+ui.addElementOnContainer = function (cellView, options) {
+    'use strict';
 
-                if (istar.metamodel.nodes[currentAddingElement].customProperties) {
-                    element.prop('customProperties', istar.metamodel.nodes[currentAddingElement].customProperties);
-                }
-                element.prop('customProperties/Description', '');
-                ui.selectCell(element);
+    try {
+        var currentAddingElement = ui.states.editor.ADDING.data.typeNameToAdd;
+        var isValid = { isValid: false };
+        if (istar.metamodel.nodes[currentAddingElement]) {
+            if (istar.metamodel.nodes[currentAddingElement].canBeInnerElement) {
+                isValid = istar.metamodel.nodes[currentAddingElement].isValid(cellView.model);
             }
             else {
-                ui.displayInvalidLinkMessage(isValid.message);
+                isValid = {
+                    message: 'a ' + currentAddingElement + ' cannot be added inside an actor'
+                };
             }
-        } catch (e) {
-            console.log(e);
-            ui.states.editor.transitionTo(ui.states.editor.VIEWING);
         }
-    };
-    ui.addLinkBetweenContainers = function (newLink, targetCellView) {
-        'use strict';
 
-        try {
-            ui.states.editor.ADDING.data.linkTargetView = targetCellView;
-            if (istar.metamodel.containerLinks[newLink].isValid(ui.states.editor.ADDING.data.linkSourceView.model, ui.states.editor.ADDING.data.linkTargetView.model)) {
-                istar['add' + ui.states.editor.ADDING.data.typeNameToAdd](ui.states.editor.ADDING.data.linkSourceView.model, ui.states.editor.ADDING.data.linkTargetView.model);
+        if (isValid.isValid) {
+            //centers the position
+            var bbox = (new istar.metamodel.nodes[currentAddingElement].shapeObject()).getBBox();
+            options.position.x -= bbox.width / 2;
+            options.position.y -= bbox.height / 2;
+
+            var element = ui.addNodeInPlace(cellView.model, istar['add' + currentAddingElement], options);
+
+            if (istar.metamodel.nodes[currentAddingElement].customProperties) {
+                element.prop('customProperties', istar.metamodel.nodes[currentAddingElement].customProperties);
             }
-        } catch (e) {
-            console.log(e);
-        } finally {
-            ui.states.editor.ADDING.data.linkSourceView.unhighlight();
-            ui.states.editor.ADDING.data.button.end();
+            element.prop('customProperties/Description', '');
+            ui.selectCell(element);
         }
-    };
+        else {
+            ui.displayInvalidLinkMessage(isValid.message);
+        }
+    } catch (e) {
+        console.log(e);
+        ui.states.editor.transitionTo(ui.states.editor.VIEWING);
+    }
+};
+ui.addLinkBetweenContainers = function (newLink, targetCellView) {
+    'use strict';
 
-    ui.addDependency = function (source, dependencyType, target) {
-        'use strict';
-
-        var node = '';
-        var position = { x: 10, y: 10 };
-        var text = 'Dependum';
-
-        var dependumType = dependencyType.replace('DependencyLink', '');
-        node = istar['add' + dependumType](text, position);
-
-        var links = istar.addDependency(source, node, target);
-        links[0].on('change:vertices', ui._toggleSmoothness);
-        links[1].on('change:vertices', ui._toggleSmoothness);
-
-        ui.setupDependencyRemoval(links);
-
-        node.prop('customProperties/Description', '');
-        ui.selectCell(node);
-    };
-
-    ui.setupDependencyRemoval = function (links) {
-        'use strict';
-
-        //ensure that the entire dependency (two links and dependum) are deleted
-        //when any of its links is deleted
-        //this is needed when a depender or dependee is deleted, so that
-        //the dependency will not be left dangling in the diagram
-        links[0].on('remove', function () {
-            if (this.getSourceElement() && this.getSourceElement().isDependum()) {
-                this.getSourceElement().remove({ disconnectLinks: true });
-                this.prop('otherHalf').remove();
-            }
-            if (this.getTargetElement() && this.getTargetElement().isDependum()) {
-                this.getTargetElement().remove({ disconnectLinks: true });
-                this.prop('otherHalf').remove();
-            }
-        });
-        links[1].on('remove', function () {
-            if (this.getSourceElement() && this.getSourceElement().isDependum()) {
-                this.getSourceElement().remove({ disconnectLinks: true });
-                this.prop('otherHalf').remove();
-            }
-            if (this.getTargetElement() && this.getTargetElement().isDependum()) {
-                this.getTargetElement().remove({ disconnectLinks: true });
-                this.prop('otherHalf').remove();
-            }
-        });
-    };
-
-    ui.addNodeInPlace = function (clickedNode, callback, options) {
-        'use strict';
+    try {
+        ui.states.editor.ADDING.data.linkTargetView = targetCellView;
+        if (istar.metamodel.containerLinks[newLink].isValid(ui.states.editor.ADDING.data.linkSourceView.model, ui.states.editor.ADDING.data.linkTargetView.model)) {
+            istar['add' + ui.states.editor.ADDING.data.typeNameToAdd](ui.states.editor.ADDING.data.linkSourceView.model, ui.states.editor.ADDING.data.linkTargetView.model);
+        }
+    } catch (e) {
+        console.log(e);
+    } finally {
+        ui.states.editor.ADDING.data.linkSourceView.unhighlight();
         ui.states.editor.ADDING.data.button.end();
+    }
+};
 
-        //assigns the new node to the correct parent
-        //if the user clicked on an actor kind, the parent is the clicked element itself (i.e., the actor)
-        //otherwise, if the user clicked on another element (e.g., a goal), then the parent of the new element will be the same parent of the clicked element
-        var node;
-        if (clickedNode.isKindOfActor()) {
+ui.addDependency = function (source, dependencyType, target) {
+    'use strict';
+
+    var node = '';
+    var position = { x: 10, y: 10 };
+    var text = 'Dependum';
+
+    var dependumType = dependencyType.replace('DependencyLink', '');
+    node = istar['add' + dependumType](text, position);
+
+    var links = istar.addDependency(source, node, target);
+    links[0].on('change:vertices', ui._toggleSmoothness);
+    links[1].on('change:vertices', ui._toggleSmoothness);
+
+    ui.setupDependencyRemoval(links);
+
+    node.prop('customProperties/Description', '');
+    ui.selectCell(node);
+};
+
+ui.setupDependencyRemoval = function (links) {
+    'use strict';
+
+    //ensure that the entire dependency (two links and dependum) are deleted
+    //when any of its links is deleted
+    //this is needed when a depender or dependee is deleted, so that
+    //the dependency will not be left dangling in the diagram
+    links[0].on('remove', function () {
+        if (this.getSourceElement() && this.getSourceElement().isDependum()) {
+            this.getSourceElement().remove({ disconnectLinks: true });
+            this.prop('otherHalf').remove();
+        }
+        if (this.getTargetElement() && this.getTargetElement().isDependum()) {
+            this.getTargetElement().remove({ disconnectLinks: true });
+            this.prop('otherHalf').remove();
+        }
+    });
+    links[1].on('remove', function () {
+        if (this.getSourceElement() && this.getSourceElement().isDependum()) {
+            this.getSourceElement().remove({ disconnectLinks: true });
+            this.prop('otherHalf').remove();
+        }
+        if (this.getTargetElement() && this.getTargetElement().isDependum()) {
+            this.getTargetElement().remove({ disconnectLinks: true });
+            this.prop('otherHalf').remove();
+        }
+    });
+};
+
+ui.addNodeInPlace = function (clickedNode, callback, options) {
+    'use strict';
+    ui.states.editor.ADDING.data.button.end();
+
+    //assigns the new node to the correct parent
+    //if the user clicked on an actor kind, the parent is the clicked element itself (i.e., the actor)
+    //otherwise, if the user clicked on another element (e.g., a goal), then the parent of the new element will be the same parent of the clicked element
+    var node;
+    if (clickedNode.isKindOfActor()) {
+        node = callback('', options);
+        clickedNode.embedNode(node);
+    }
+    else {
+        var parent = istar.graph.getCell(clickedNode.attributes.parent);
+        if (parent && parent.isKindOfActor()) {
             node = callback('', options);
-            clickedNode.embedNode(node);
+            istar.graph.getCell(clickedNode.attributes.parent).embedNode(node);
         }
-        else {
-            var parent = istar.graph.getCell(clickedNode.attributes.parent);
-            if (parent && parent.isKindOfActor()) {
-                node = callback('', options);
-                istar.graph.getCell(clickedNode.attributes.parent).embedNode(node);
+    }
+    return node;
+};
+
+
+ui.changeColorBoundaries = function (color) {
+    'use strict';
+
+    _.map(istar.getElements(), function (node) {
+        if (node.isKindOfActor()) {
+            node.attr('.boundary', { fill: color });
+        }
+    });
+};
+ui.changeColorElements = function (color) {
+    'use strict';
+
+    _.map(istar.getElements(), function (node) {
+        node.attr('.element/fill', color);
+    });
+};
+ui.changeColorElement = function (color, element) {
+    'use strict';
+
+    element = element || ui.getSelectedCells()[0];
+    element.attr('.element', { fill: color });
+
+    //stores the color in a property for use when saving the model
+    if (color === ui.defaultElementBackgroundColor) {
+        element.prop('backgroundColor', null);
+    }
+    else {
+        element.prop('backgroundColor', color);
+    }
+};
+ui.connectLinksToShape = function () {
+    'use strict';
+
+    $('.menu-body *').addClass('waiting');
+    //do the processing after a small delay, in order to allow the browser to update the cursor icon
+    setTimeout(function () {
+        istar.paper.options.linkConnectionPoint = joint.util.shapePerimeterConnectionPoint;
+        //this translation is just to force re-rendering of links
+        _.forEach(istar.getElements(), function (e) {
+            e.translate(1);
+            e.translate(-1);
+        });
+        istar.paper.options.linkConnectionPoint = undefined;
+        $('.menu-body *').removeClass('waiting');
+        ui.selectPaper();
+    }, 100);
+};
+
+$('#menu-button-save-model').click(function () {
+    'use strict';
+
+    var model = istar.fileManager.saveModel();
+    var csvData = 'data:text/json;charset=utf-8,' + (encodeURI(model));
+    joint.util.downloadDataUri(csvData, 'goalModel.txt');
+});
+
+$('#menu-button-generate-report').click(function () {
+    'use strict';
+
+    istar.fileManager.generateReport();
+});
+
+$('#modal-button-load-model').click(function () {
+    'use strict';
+
+    $(this).button('loading');
+    //load the model with a small delay, giving time to the browser to display the 'loading' message
+    setTimeout(function () {
+        //call the actual loading
+        try {
+            var fileInput = $('#input-file-to-load')[0];
+            if (fileInput.files.length === 0) {
+                ui.alert('You must select a file to load', 'No file selected');
+
+                $('#modal-load-model').modal('hide');
+                $('#modal-button-load-model').button('reset');
+            }
+            else {
+                //else, load model from file
+                var file = fileInput.files[0];
+                if (file.type === 'text/plain') {
+                    if (ui.getSelectedCells()[0]) {
+                        ui.hideSelection();
+                    }
+                    var fileReader = new FileReader();
+                    fileReader.onload = function (e) {
+                        ui.resetCellDisplayStates();
+                        istar.fileManager.loadModel(e.target.result);//do the actual loading
+                        ui.selectPaper();//select the model (as a whole)
+
+                        $('#modal-load-model').modal('hide');
+                        $('#modal-button-load-model').button('reset');
+                    };
+                    fileReader.readAsText(file);
+
+                }
+                else {
+                    ui.alert('Sorry, this kind of file is not valid', 'Error loading file');
+                    $('#modal-button-load-model').button('reset');
+                    $('#modal-load-model').modal('hide');
+                }
             }
         }
-        return node;
-    };
+        catch (error) {
+            $('#modal-button-load-model').button('reset');
+            ui.alert('Sorry, the input model is not valid.', 'Error loading file');
+            console.log(error.stack);
+        }
+    }, 20);
+});
 
+ui.setupUi = function () {
+    'use strict';
 
-    ui.changeColorBoundaries = function (color) {
-        'use strict';
+    overrideIstarFunctions();
+    this.setupPluginMenu();
+    this.setupMetamodelUI();
+    this.defineInteractions();
+    ui.components.createAddButtons();
 
-        _.map(istar.getElements(), function (node) {
-            if (node.isKindOfActor()) {
-                node.attr('.boundary', { fill: color });
-            }
-        });
-    };
-    ui.changeColorElements = function (color) {
-        'use strict';
+    $('#placeholder-save-model').hide();
 
-        _.map(istar.getElements(), function (node) {
-            node.attr('.element/fill', color);
-        });
-    };
-    ui.changeColorElement = function (color, element) {
-        'use strict';
+    this.setupElementResizing();
+    this.setupDiagramSizeInputs();
+    this.setupLoadExampleButton();
+    this.setupMainMenuInteraction();
+    this.setupSidepanelInteraction();
+    this.setupSaveImageModal();
 
-        element = element || ui.getSelectedCells()[0];
-        element.attr('.element', { fill: color });
+    ui.selectPaper();
 
-        //stores the color in a property for use when saving the model
-        if (color === ui.defaultElementBackgroundColor) {
-            element.prop('backgroundColor', null);
+    function overrideIstarFunctions() {
+        //extend original iStar functions with UI behavior
+        var originalFunction = null;
+
+        originalFunction = istar.clearModel;
+        istar.clearModel = function () {
+            originalFunction();
+            ui.selectPaper();
+        };
+    }
+};
+
+ui.setupSaveImageModal = function () {
+    'use strict';
+
+    //save model when Enter is pressed
+    $('#modal-save-image-form').on('submit', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('#modal-button-save-image').click();
+    });
+
+    $('#input-file-format').change(function () {
+        if ($(this).val() === "PNG") {
+            $('#save-png-options').removeClass('hidden');
         }
         else {
-            element.prop('backgroundColor', color);
+            $('#save-png-options').addClass('hidden');
         }
-    };
-    ui.connectLinksToShape = function () {
-        'use strict';
 
-        $('.menu-body *').addClass('waiting');
+    });
+
+    $('#modal-button-save-image').click(function () {
+        var $saveButton = $(this);
+
+        //let the user know that sometinh is being done
+        $('body *').addClass('waiting');
+        $saveButton.button('preparing');//display status information in the save button
+        $saveButton.attr('disabled', 'disabled');
+
+        //optionally fix link gaps
+        if ($('#modal-input-precise-links').prop('checked')) {
+            //this is a time-consuming function. It checks every link connection and make it perfectly fit the
+            //shape of the connected element
+            ui.connectLinksToShape();
+        }
+
+        //hide UI elements before saving
+        var $jointMarkers = $('.marker-vertices, .link-tools, .marker-arrowheads, .remove-element');
+        $jointMarkers.hide();
+        ui.hideSelection();
+
+        //execute the actual saving only after some time has passed, allowing the browser to update the UI
+        setTimeout(function () {
+            $saveButton.button('save'); //display status information in the save button
+            var filename = $('#input-filename').val() || 'goalModel';
+
+            //Adjust the size of the model, to prevent empty spaces in the image
+            var originalWidth = istar.paper.getArea().width;
+            var originalHeight = istar.paper.getArea().height;
+            istar.paper.fitToContent({ padding: 10, allowNewOrigin: 'any' });
+
+            if ($('#input-file-format').val() === "SVG") {
+                var svgData = istar.fileManager.saveSvg(istar.paper);
+                joint.util.downloadDataUri(svgData, filename + '.svg');
+            }
+            else {
+                //save PNG
+                var resolutionFactor = 1;
+                if ($('#modal-input-hi-res').prop('checked')) {
+                    resolutionFactor = 4;
+                }
+                istar.fileManager.savePng('diagram', joint.util.downloadBlob, filename, resolutionFactor, $('#modal-input-transparent-background').prop('checked'));
+            }
+
+            //restore the paper to its initial state
+            istar.paper.setDimensions(originalWidth, originalHeight);
+            istar.paper.translate(0, 0);
+
+            //show the UI elements back again
+            $('.marker-vertices, .link-tools, .marker-arrowheads, .remove-element').show();
+            ui.showSelection(ui.getSelectedCells()[0]);
+
+            $('body *').removeClass('waiting');
+            $saveButton.button('reset');
+            $saveButton.removeAttr('disabled');
+            $('#modal-save-image').modal('hide');
+        }, 100);
+
+    });
+};
+
+ui.setupPluginMenu = function () {
+    'use strict';
+
+    //listen for changes in the plugin menus, displaying it if some element is added to it
+    var targetNode = document.getElementById('menu-plugin');
+    var config = { childList: true, subtree: true }; // Options for the observer (which mutations to observe)
+    var observer = new MutationObserver(function (_mutationsList, observer) {
+        $('#menu-item-plugin').show();
+        $('#logo').html('piStar plugin');
+        $('.menu-bar').addClass('plugged');
+        $('.menu-item').addClass('plugged');
+        observer.disconnect();//stop observing
+    });
+    observer.observe(targetNode, config);
+};
+
+ui.setupDiagramSizeInputs = function () {
+    'use strict';
+
+    //updates the initial values of the diagram's size inputs with the diagram's actual size
+    $('#input-diagram-width').val(istar.paper.getArea().width);
+    $('#input-diagram-height').val(istar.paper.getArea().height);
+
+    //setup to update the inputs' values whenever the diagram's size is changed
+    istar.paper.on('resize', function (width, height) {
+        $('#input-diagram-width').val(width);
+        $('#input-diagram-height').val(height);
+    });
+
+    //setup to update the diagram's size whenever the user leaves (focusout) the input fields or press enter
+    $('#input-diagram-width, #input-diagram-height')
+        .focusout(function () {
+            istar.paper.setDimensions($('#input-diagram-width').val(), $('#input-diagram-height').val());
+        })
+        .keyup(function (e) {
+            if (e.which === 13) {
+                istar.paper.setDimensions($('#input-diagram-width').val(), $('#input-diagram-height').val());
+                this.blur(); //remove focus from the input field
+            }
+        });
+};
+
+ui.setupLoadExampleButton = function () {
+    'use strict';
+
+    $('.modal-button-load-example').click(function () {
+        $('.modal *').addClass('waiting');
+        var modelToLoad = $(this).data('model');
         //do the processing after a small delay, in order to allow the browser to update the cursor icon
         setTimeout(function () {
-            istar.paper.options.linkConnectionPoint = joint.util.shapePerimeterConnectionPoint;
-            //this translation is just to force re-rendering of links
-            _.forEach(istar.getElements(), function (e) {
-                e.translate(1);
-                e.translate(-1);
-            });
-            istar.paper.options.linkConnectionPoint = undefined;
-            $('.menu-body *').removeClass('waiting');
-            ui.selectPaper();
+            if (ui.getSelectedCells()[0]) {
+                ui.hideSelection();
+            }
+            ui.resetCellDisplayStates();
+            istar.fileManager.loadModel(istar.models[modelToLoad]);
+            ui.selectPaper();//select the model (as a whole)
+            $('.modal *').removeClass('waiting');
+            $('#modal-examples').modal('hide');
         }, 100);
-    };
 
-    $('#menu-button-save-model').click(function () {
-        'use strict';
-
-        var model = istar.fileManager.saveModel();
-        var csvData = 'data:text/json;charset=utf-8,' + (encodeURI(model));
-        joint.util.downloadDataUri(csvData, 'goalModel.txt');
+        ui.collectActionData('click', 'load example', modelToLoad);
     });
+};
 
-    $('#menu-button-generate-report').click(function () {
-        'use strict';
+ui.setupMainMenuInteraction = function () {
+    'use strict';
 
-        istar.fileManager.generateReport();
-    });
+    // default menu to be displayed when the tool opens
+    var currentMenuItem = $('#menu-item-add');
 
-    $('#modal-button-load-model').click(function () {
-        'use strict';
+    // set up the click behavior for every menu-item
+    $('.menu-items a').each(function () {
+        $(this).click(function () {
+            var target = $('#' + $(this).data('toggle'));
 
-        $(this).button('loading');
-        //load the model with a small delay, giving time to the browser to display the 'loading' message
-        setTimeout(function () {
-            //call the actual loading
-            try {
-                var fileInput = $('#input-file-to-load')[0];
-                if (fileInput.files.length === 0) {
-                    ui.alert('You must select a file to load', 'No file selected');
+            if (currentMenuItem === null) {
+                //no menu is currently displayed, the clicked one will now be displayed
+                currentMenuItem = $(this);
+                $(this).addClass('active');
 
-                    $('#modal-load-model').modal('hide');
-                    $('#modal-button-load-model').button('reset');
-                }
-                else {
-                    //else, load model from file
-                    var file = fileInput.files[0];
-                    if (file.type === 'text/plain') {
-                        if (ui.getSelectedCells()[0]) {
-                            ui.hideSelection();
-                        }
-                        var fileReader = new FileReader();
-                        fileReader.onload = function (e) {
-                            ui.resetCellDisplayStates();
-                            istar.fileManager.loadModel(e.target.result);//do the actual loading
-                            ui.selectPaper();//select the model (as a whole)
+                target.css('display', 'none');
+                target.removeClass('hidden');
+                target.slideDown(200);
 
-                            $('#modal-load-model').modal('hide');
-                            $('#modal-button-load-model').button('reset');
-                        };
-                        fileReader.readAsText(file);
-
-                    }
-                    else {
-                        ui.alert('Sorry, this kind of file is not valid', 'Error loading file');
-                        $('#modal-button-load-model').button('reset');
-                        $('#modal-load-model').modal('hide');
-                    }
-                }
+                $('#star').css("-transform", "rotate(0deg)");
             }
-            catch (error) {
-                $('#modal-button-load-model').button('reset');
-                ui.alert('Sorry, the input model is not valid.', 'Error loading file');
-                console.log(error.stack);
-            }
-        }, 20);
-    });
+            else if ($(this).attr('id') !== currentMenuItem.attr('id')) {
+                //some menu is already displayed, a different one will be displayed
 
-    ui.setupUi = function () {
-        'use strict';
+                //deselect and hide the current menu
+                $(currentMenuItem).removeClass('active');
+                $('#' + $(currentMenuItem).data('toggle')).addClass('hidden');
+                $('#' + $(currentMenuItem).data('toggle')).slideUp(0);
 
-        overrideIstarFunctions();
-        this.setupPluginMenu();
-        this.setupMetamodelUI();
-        this.defineInteractions();
-        ui.components.createAddButtons();
+                currentMenuItem = $(this);
 
-        $('#placeholder-save-model').hide();
+                //select and show the clicked menu
+                currentMenuItem.addClass('active');
+                target.removeClass('hidden');
+                target.slideDown(0);
 
-        this.setupElementResizing();
-        this.setupDiagramSizeInputs();
-        this.setupLoadExampleButton();
-        this.setupMainMenuInteraction();
-        this.setupSidepanelInteraction();
-        this.setupSaveImageModal();
-
-        ui.selectPaper();
-
-        function overrideIstarFunctions() {
-            //extend original iStar functions with UI behavior
-            var originalFunction = null;
-
-            originalFunction = istar.clearModel;
-            istar.clearModel = function () {
-                originalFunction();
-                ui.selectPaper();
-            };
-        }
-    };
-
-    ui.setupSaveImageModal = function () {
-        'use strict';
-
-        //save model when Enter is pressed
-        $('#modal-save-image-form').on('submit', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            $('#modal-button-save-image').click();
-        });
-
-        $('#input-file-format').change(function () {
-            if ($(this).val() === "PNG") {
-                $('#save-png-options').removeClass('hidden');
             }
             else {
-                $('#save-png-options').addClass('hidden');
-            }
-
-        });
-
-        $('#modal-button-save-image').click(function () {
-            var $saveButton = $(this);
-
-            //let the user know that sometinh is being done
-            $('body *').addClass('waiting');
-            $saveButton.button('preparing');//display status information in the save button
-            $saveButton.attr('disabled', 'disabled');
-
-            //optionally fix link gaps
-            if ($('#modal-input-precise-links').prop('checked')) {
-                //this is a time-consuming function. It checks every link connection and make it perfectly fit the
-                //shape of the connected element
-                ui.connectLinksToShape();
-            }
-
-            //hide UI elements before saving
-            var $jointMarkers = $('.marker-vertices, .link-tools, .marker-arrowheads, .remove-element');
-            $jointMarkers.hide();
-            ui.hideSelection();
-
-            //execute the actual saving only after some time has passed, allowing the browser to update the UI
-            setTimeout(function () {
-                $saveButton.button('save'); //display status information in the save button
-                var filename = $('#input-filename').val() || 'goalModel';
-
-                //Adjust the size of the model, to prevent empty spaces in the image
-                var originalWidth = istar.paper.getArea().width;
-                var originalHeight = istar.paper.getArea().height;
-                istar.paper.fitToContent({ padding: 10, allowNewOrigin: 'any' });
-
-                if ($('#input-file-format').val() === "SVG") {
-                    var svgData = istar.fileManager.saveSvg(istar.paper);
-                    joint.util.downloadDataUri(svgData, filename + '.svg');
-                }
-                else {
-                    //save PNG
-                    var resolutionFactor = 1;
-                    if ($('#modal-input-hi-res').prop('checked')) {
-                        resolutionFactor = 4;
-                    }
-                    istar.fileManager.savePng('diagram', joint.util.downloadBlob, filename, resolutionFactor, $('#modal-input-transparent-background').prop('checked'));
-                }
-
-                //restore the paper to its initial state
-                istar.paper.setDimensions(originalWidth, originalHeight);
-                istar.paper.translate(0, 0);
-
-                //show the UI elements back again
-                $('.marker-vertices, .link-tools, .marker-arrowheads, .remove-element').show();
-                ui.showSelection(ui.getSelectedCells()[0]);
-
-                $('body *').removeClass('waiting');
-                $saveButton.button('reset');
-                $saveButton.removeAttr('disabled');
-                $('#modal-save-image').modal('hide');
-            }, 100);
-
-        });
-    };
-
-    ui.setupPluginMenu = function () {
-        'use strict';
-
-        //listen for changes in the plugin menus, displaying it if some element is added to it
-        var targetNode = document.getElementById('menu-plugin');
-        var config = { childList: true, subtree: true }; // Options for the observer (which mutations to observe)
-        var observer = new MutationObserver(function (_mutationsList, observer) {
-            $('#menu-item-plugin').show();
-            $('#logo').html('piStar plugin');
-            $('.menu-bar').addClass('plugged');
-            $('.menu-item').addClass('plugged');
-            observer.disconnect();//stop observing
-        });
-        observer.observe(targetNode, config);
-    };
-
-    ui.setupDiagramSizeInputs = function () {
-        'use strict';
-
-        //updates the initial values of the diagram's size inputs with the diagram's actual size
-        $('#input-diagram-width').val(istar.paper.getArea().width);
-        $('#input-diagram-height').val(istar.paper.getArea().height);
-
-        //setup to update the inputs' values whenever the diagram's size is changed
-        istar.paper.on('resize', function (width, height) {
-            $('#input-diagram-width').val(width);
-            $('#input-diagram-height').val(height);
-        });
-
-        //setup to update the diagram's size whenever the user leaves (focusout) the input fields or press enter
-        $('#input-diagram-width, #input-diagram-height')
-            .focusout(function () {
-                istar.paper.setDimensions($('#input-diagram-width').val(), $('#input-diagram-height').val());
-            })
-            .keyup(function (e) {
-                if (e.which === 13) {
-                    istar.paper.setDimensions($('#input-diagram-width').val(), $('#input-diagram-height').val());
-                    this.blur(); //remove focus from the input field
-                }
-            });
-    };
-
-    ui.setupLoadExampleButton = function () {
-        'use strict';
-
-        $('.modal-button-load-example').click(function () {
-            $('.modal *').addClass('waiting');
-            var modelToLoad = $(this).data('model');
-            //do the processing after a small delay, in order to allow the browser to update the cursor icon
-            setTimeout(function () {
-                if (ui.getSelectedCells()[0]) {
-                    ui.hideSelection();
-                }
-                ui.resetCellDisplayStates();
-                istar.fileManager.loadModel(istar.models[modelToLoad]);
-                ui.selectPaper();//select the model (as a whole)
-                $('.modal *').removeClass('waiting');
-                $('#modal-examples').modal('hide');
-            }, 100);
-
-            ui.collectActionData('click', 'load example', modelToLoad);
-        });
-    };
-
-    ui.setupMainMenuInteraction = function () {
-        'use strict';
-
-        // default menu to be displayed when the tool opens
-        var currentMenuItem = $('#menu-item-add');
-
-        // set up the click behavior for every menu-item
-        $('.menu-items a').each(function () {
-            $(this).click(function () {
-                var target = $('#' + $(this).data('toggle'));
-
-                if (currentMenuItem === null) {
-                    //no menu is currently displayed, the clicked one will now be displayed
-                    currentMenuItem = $(this);
-                    $(this).addClass('active');
-
-                    target.css('display', 'none');
-                    target.removeClass('hidden');
-                    target.slideDown(200);
-
-                    $('#star').css("-transform", "rotate(0deg)");
-                }
-                else if ($(this).attr('id') !== currentMenuItem.attr('id')) {
-                    //some menu is already displayed, a different one will be displayed
-
-                    //deselect and hide the current menu
+                //some menu is already displayed, the menu will be hidden
+                target.slideUp(200, function () {
+                    //only deselect the menu after its body disappear,
+                    //for smoother visual animation
                     $(currentMenuItem).removeClass('active');
-                    $('#' + $(currentMenuItem).data('toggle')).addClass('hidden');
-                    $('#' + $(currentMenuItem).data('toggle')).slideUp(0);
-
-                    currentMenuItem = $(this);
-
-                    //select and show the clicked menu
-                    currentMenuItem.addClass('active');
-                    target.removeClass('hidden');
-                    target.slideDown(0);
-
-                }
-                else {
-                    //some menu is already displayed, the menu will be hidden
-                    target.slideUp(200, function () {
-                        //only deselect the menu after its body disappear,
-                        //for smoother visual animation
-                        $(currentMenuItem).removeClass('active');
-                        currentMenuItem = null;
-                    });
-                    $('#star').css("-transform", "rotate(-180deg)");
-                }
-            });
-        });
-
-        $('#' + currentMenuItem.data('toggle')).slideDown(0); //displays the default menu when the tool is loaded
-
-        //change state when focusing on inputs, to prevent accidentally deleting model elements with backspace and del
-        $('input')
-            .focusin(function () {
-                ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
-            })
-            .focusout(function () {
-                ui.states.editor.transitionTo(ui.states.editor.VIEWING);
-            });
-
-    };
-
-    $('#all-actor-boundary-color-picker').on('change', function () {
-        'use strict';
-
-        ui.changeColorBoundaries(this.value);
-    });
-    $('#all-elements-color-picker').on('change', function () {
-        'use strict';
-
-        ui.changeColorElements(this.value);
-    });
-
-    $('#single-element-color-picker').on('change', function () {
-        'use strict';
-
-        ui.changeColorElement(this.value);
-    });
-
-    $('#menu-button-precise-links').click(function () {
-        'use strict';
-
-        ui.connectLinksToShape();
-    });
-
-    $('#menu-button-toggle-fullscreen').click(function () {
-        'use strict';
-
-        joint.util.toggleFullScreen();
-    });
-
-    $('#menu-button-straighten-links').click(function () {
-        'use strict';
-
-        ui.confirm({
-            message: 'ATTENTION! This action will remove all vertices you may have added to the links in this model. This' +
-                ' action is irreversible. Are you sure you want to proceed?',
-            callback: function (value) {
-                if (value) {
-                    var selectedCell = ui.getSelectedCells()[0];
-                    _.forEach(istar.getLinks(), function (link) {
-                        link.vertices([]);
-                    });
-
-                    //restore selection to the element that was selected (if any) when the action started
-                    ui.selectCell(selectedCell);
-                }
+                    currentMenuItem = null;
+                });
+                $('#star').css("-transform", "rotate(-180deg)");
             }
         });
     });
 
-    $('#menu-button-auto-layout').click(function () {
-        'use strict';
+    $('#' + currentMenuItem.data('toggle')).slideDown(0); //displays the default menu when the tool is loaded
 
-        ui.confirm({
-            message: 'ATTENTION! This action will change the position of the actors, while also removing every vertex you' +
-                ' may have added to their links. This action is irreversible. Are you sure you want to proceed?',
-            callback: function (value) {
-                if (value) {
-                    var selectedCell = ui.getSelectedCells()[0] ? ui.getSelectedCells()[0] : null;
-                    ui.deselectCell(selectedCell);
-                    ui.hideSelection();
-
-                    istar.layout.updateLayout();
-
-                    //restore selection to the element that was selected (if any) when the action started
-                    ui.selectCell(selectedCell);
-                    ui.showSelection(selectedCell);
-                }
-            }
+    //change state when focusing on inputs, to prevent accidentally deleting model elements with backspace and del
+    $('input')
+        .focusin(function () {
+            ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
+        })
+        .focusout(function () {
+            ui.states.editor.transitionTo(ui.states.editor.VIEWING);
         });
+
+};
+
+$('#all-actor-boundary-color-picker').on('change', function () {
+    'use strict';
+
+    ui.changeColorBoundaries(this.value);
+});
+$('#all-elements-color-picker').on('change', function () {
+    'use strict';
+
+    ui.changeColorElements(this.value);
+});
+
+$('#single-element-color-picker').on('change', function () {
+    'use strict';
+
+    ui.changeColorElement(this.value);
+});
+
+$('#menu-button-precise-links').click(function () {
+    'use strict';
+
+    ui.connectLinksToShape();
+});
+
+$('#menu-button-toggle-fullscreen').click(function () {
+    'use strict';
+
+    joint.util.toggleFullScreen();
+});
+
+$('#menu-button-straighten-links').click(function () {
+    'use strict';
+
+    ui.confirm({
+        message: 'ATTENTION! This action will remove all vertices you may have added to the links in this model. This' +
+            ' action is irreversible. Are you sure you want to proceed?',
+        callback: function (value) {
+            if (value) {
+                var selectedCell = ui.getSelectedCells()[0];
+                _.forEach(istar.getLinks(), function (link) {
+                    link.vertices([]);
+                });
+
+                //restore selection to the element that was selected (if any) when the action started
+                ui.selectCell(selectedCell);
+            }
+        }
     });
+});
 
-    ui.changeAddMenuStatus = function (text) {
-        'use strict';
+$('#menu-button-auto-layout').click(function () {
+    'use strict';
 
-        $('#status').html(text);
-    };
+    ui.confirm({
+        message: 'ATTENTION! This action will change the position of the actors, while also removing every vertex you' +
+            ' may have added to their links. This action is irreversible. Are you sure you want to proceed?',
+        callback: function (value) {
+            if (value) {
+                var selectedCell = ui.getSelectedCells()[0] ? ui.getSelectedCells()[0] : null;
+                ui.deselectCell(selectedCell);
+                ui.hideSelection();
 
-    ui.deleteCell = function (cellToDelete) {
-        function getDependencyFromDependencyLink(link) {
-            let dependum = null;
-            if (link.getSourceElement() && link.getSourceElement().isDependum()) {
-                dependum = link.getSourceElement();
-            }
-            else if (link.getTargetElement() && link.getTargetElement().isDependum()) {
-                dependum = link.getTargetElement();
-            }
-            let links = [link, link.prop('otherHalf')];
+                istar.layout.updateLayout();
 
-            return { dependum: dependum, links: links };
-        }
-
-        function undoDeleteDependency(cell, links) {
-            return function () {
-                istar.graph.addCell(cell);
-                istar.graph.addCell(links);
-
-                for (let link of links) {
-                    if ('x' in link.prop('source')) {
-                        link.prop('source', cell);
-                    }
-                    else if ('x' in link.prop('target')) {
-                        link.prop('target', cell);
-                    }
-                    istar.paper.findViewByModel(link).hideTools(); // Hide the vertices' handles
-                }
+                //restore selection to the element that was selected (if any) when the action started
+                ui.selectCell(selectedCell);
+                ui.showSelection(selectedCell);
             }
         }
+    });
+});
 
-        if (cellToDelete.isDependum()) {
-            istar.undoManager.addToHistory(
-                undoDeleteDependency(cellToDelete, istar.graph.getConnectedLinks(cellToDelete))
-            );
+ui.changeAddMenuStatus = function (text) {
+    'use strict';
+
+    $('#status').html(text);
+};
+
+ui.deleteCell = function (cellToDelete) {
+    function getDependencyFromDependencyLink(link) {
+        let dependum = null;
+        if (link.getSourceElement() && link.getSourceElement().isDependum()) {
+            dependum = link.getSourceElement();
         }
-        else if (cellToDelete.isDependencyLink()) {
-            const { dependum, links } = getDependencyFromDependencyLink(cellToDelete);
-            istar.undoManager.addToHistory(
-                undoDeleteDependency(dependum, links)
-            );
+        else if (link.getTargetElement() && link.getTargetElement().isDependum()) {
+            dependum = link.getTargetElement();
         }
-        else if (cellToDelete.isContainerLink()) {
-            istar.undoManager.addToHistory(
-                function (link) {
-                    return function () {
-                        istar.graph.addCell(link);
-                        link.attr('connection-wrap/stroke', 'transparent');  // Hide the link highlight
-                    }
-                }(cellToDelete)
-            );
-        }
-        else if (cellToDelete.isContainer()) {
-            let links = istar.graph.getConnectedLinks(cellToDelete);
-            let dependencies = [];
+        let links = [link, link.prop('otherHalf')];
+
+        return { dependum: dependum, links: links };
+    }
+
+    function undoDeleteDependency(cell, links) {
+        return function () {
+            istar.graph.addCell(cell);
+            istar.graph.addCell(links);
+
             for (let link of links) {
-                if (link.isDependencyLink()) {
-                    dependencies.push(getDependencyFromDependencyLink(link));
+                if ('x' in link.prop('source')) {
+                    link.prop('source', cell);
                 }
-            }
-            links = _.filter(links, link => { return !link.isDependencyLink(); });
-
-            const children = cellToDelete.getEmbeddedCells();
-            for (let child of children) {
-                let nodeLinks = istar.graph.getConnectedLinks(child);
-                for (let link of nodeLinks) {
-                    if (link.isDependencyLink()) {
-                        dependencies.push(getDependencyFromDependencyLink(link));
-                    }
+                else if ('x' in link.prop('target')) {
+                    link.prop('target', cell);
                 }
+                istar.paper.findViewByModel(link).hideTools(); // Hide the vertices' handles
             }
-
-            istar.undoManager.addToHistory(
-                function (cell, links, dependencies, children) {
-                    return function () {
-                        istar.graph.addCell(cell);
-                        istar.graph.addCell(links);
-
-                        istar.graph.addCell(children);
-                        for (let child of children) {
-                            cell.embed(child);
-                            if (child.isLink()) {
-                                istar.paper.findViewByModel(child).hideTools(); // Hide the vertices' handles
-                            }
-                        }
-
-                        for (let dependency of dependencies) {
-                            undoDeleteDependency(dependency.dependum, dependency.links)();
-                        }
-
-                        cell.updateBoundary();
-                    }
-                }(cellToDelete, links, dependencies, children)
-            );
         }
-        else if (cellToDelete.isNode()) {
-            let nodeLinks = istar.graph.getConnectedLinks(cellToDelete);
-            let dependencies = [];
+    }
+
+    if (cellToDelete.isDependum()) {
+        istar.undoManager.addToHistory(
+            undoDeleteDependency(cellToDelete, istar.graph.getConnectedLinks(cellToDelete))
+        );
+    }
+    else if (cellToDelete.isDependencyLink()) {
+        const { dependum, links } = getDependencyFromDependencyLink(cellToDelete);
+        istar.undoManager.addToHistory(
+            undoDeleteDependency(dependum, links)
+        );
+    }
+    else if (cellToDelete.isContainerLink()) {
+        istar.undoManager.addToHistory(
+            function (link) {
+                return function () {
+                    istar.graph.addCell(link);
+                    link.attr('connection-wrap/stroke', 'transparent');  // Hide the link highlight
+                }
+            }(cellToDelete)
+        );
+    }
+    else if (cellToDelete.isContainer()) {
+        let links = istar.graph.getConnectedLinks(cellToDelete);
+        let dependencies = [];
+        for (let link of links) {
+            if (link.isDependencyLink()) {
+                dependencies.push(getDependencyFromDependencyLink(link));
+            }
+        }
+        links = _.filter(links, link => { return !link.isDependencyLink(); });
+
+        const children = cellToDelete.getEmbeddedCells();
+        for (let child of children) {
+            let nodeLinks = istar.graph.getConnectedLinks(child);
             for (let link of nodeLinks) {
                 if (link.isDependencyLink()) {
                     dependencies.push(getDependencyFromDependencyLink(link));
                 }
             }
-            nodeLinks = _.filter(nodeLinks, link => { return !link.isDependencyLink(); });
+        }
 
-            istar.undoManager.addToHistory(
-                function (cell, links, parentId, dependencies) {
-                    return function () {
-                        istar.graph.addCell(cell);
-                        istar.graph.addCell(links);
+        istar.undoManager.addToHistory(
+            function (cell, links, dependencies, children) {
+                return function () {
+                    istar.graph.addCell(cell);
+                    istar.graph.addCell(links);
 
-                        const parent = istar.graph.getCell(parentId);
-                        parent.embed(cell);
-                        parent.updateBoundary();
-
-                        for (let link of links) {
-                            parent.embed(link);
-                            istar.paper.findViewByModel(link).hideTools(); // Hide the vertices' handles
-                        }
-
-                        for (let dependency of dependencies) {
-                            undoDeleteDependency(dependency.dependum, dependency.links)();
+                    istar.graph.addCell(children);
+                    for (let child of children) {
+                        cell.embed(child);
+                        if (child.isLink()) {
+                            istar.paper.findViewByModel(child).hideTools(); // Hide the vertices' handles
                         }
                     }
-                }(cellToDelete, nodeLinks, cellToDelete.parent(), dependencies)
-            );
-        }
-        else if (cellToDelete.isNodeLink()) {
-            istar.undoManager.addToHistory(
-                function (cell, parentId) {
-                    return function () {
-                        istar.graph.addCell(cell);
 
-                        const parent = istar.graph.getCell(parentId);
-                        parent.embed(cell);
-
-                        cell.attr('connection-wrap/stroke', 'transparent');  // Hide the link highlight
+                    for (let dependency of dependencies) {
+                        undoDeleteDependency(dependency.dependum, dependency.links)();
                     }
-                }(cellToDelete, cellToDelete.parent())
-            );
+
+                    cell.updateBoundary();
+                }
+            }(cellToDelete, links, dependencies, children)
+        );
+    }
+    else if (cellToDelete.isNode()) {
+        let nodeLinks = istar.graph.getConnectedLinks(cellToDelete);
+        let dependencies = [];
+        for (let link of nodeLinks) {
+            if (link.isDependencyLink()) {
+                dependencies.push(getDependencyFromDependencyLink(link));
+            }
         }
-        ui.getSelectedCells()[0].remove();
+        nodeLinks = _.filter(nodeLinks, link => { return !link.isDependencyLink(); });
+
+        istar.undoManager.addToHistory(
+            function (cell, links, parentId, dependencies) {
+                return function () {
+                    istar.graph.addCell(cell);
+                    istar.graph.addCell(links);
+
+                    const parent = istar.graph.getCell(parentId);
+                    parent.embed(cell);
+                    parent.updateBoundary();
+
+                    for (let link of links) {
+                        parent.embed(link);
+                        istar.paper.findViewByModel(link).hideTools(); // Hide the vertices' handles
+                    }
+
+                    for (let dependency of dependencies) {
+                        undoDeleteDependency(dependency.dependum, dependency.links)();
+                    }
+                }
+            }(cellToDelete, nodeLinks, cellToDelete.parent(), dependencies)
+        );
+    }
+    else if (cellToDelete.isNodeLink()) {
+        istar.undoManager.addToHistory(
+            function (cell, parentId) {
+                return function () {
+                    istar.graph.addCell(cell);
+
+                    const parent = istar.graph.getCell(parentId);
+                    parent.embed(cell);
+
+                    cell.attr('connection-wrap/stroke', 'transparent');  // Hide the link highlight
+                }
+            }(cellToDelete, cellToDelete.parent())
+        );
+    }
+    ui.getSelectedCells()[0].remove();
+    ui.selectPaper();
+}
+$(document).keyup(function (e) {
+    'use strict';
+
+    if (ui.states.editor.isViewing()) {
+        if (ui.getSelectedCells()[0] !== null) {
+            if (e.which === 8 || e.which === 46) {
+                // 8: backspace
+                // 46: delete
+                // The use of the 'backspace' key, in addition to the 'delete', key aims to improve support for Mac users,
+                //    since in that system the key named 'delete' actually is a 'backspace' key
+                if (ui.getSelectedCells()[0].isKindOfActor) {
+                    // If the selected cell does not have the isKindOfActor function, it means that it's not
+                    // really a cell, but the diagram itself. Thus, only delete if it has this function.
+                    if (ui.getSelectedCells()[0].isKindOfActor()) {
+                        ui.confirm({
+                            message: '<b>ATTENTION!</b>' + ' Are you sure you want to delete this entire actor, along with its content?' + '\nTIP: You can undo this action the "Go Back" button.',
+                            callback: function (value) {
+                                if (value) {
+                                    ui.deleteCell(ui.getSelectedCells()[0]);
+                                }
+                            }
+                        });
+                    } else {
+                        ui.deleteCell(ui.getSelectedCells()[0]);
+                    }
+                }
+            }
+            if ((e.ctrlKey || e.metaKey) && e.which === 90) {  //ctrl + z or command + z
+                e.preventDefault();
+                istar.undoManager.undo();
+            }
+        }
+    }
+    if (ui.states.editor.isAdding()) {
+        if (e.which === 27) {  //esc
+            ui.states.editor.ADDING.data.button.end();
+            ui.selectPaper();
+        }
+    }
+});
+
+ui.resetPointerStyles = function () {
+    'use strict';
+
+    var $diagram = $('#diagram');
+    $diagram.css('cursor', 'auto');
+    $diagram.find('g').css('cursor', 'move');
+    $diagram.find('.actorKindMain').css('cursor', 'move');
+    $('.link-tools g').css('cursor', 'pointer');
+};
+
+ui._toggleSmoothness = function (link, vertices, _something) {
+    'use strict';
+
+    if (vertices.length >= 1) {
+        link.set('smooth', true);
+    }
+    else {
+        link.set('smooth', false);
+    }
+};
+
+
+ui.changeCustomPropertyValue = function (model, propertyName, propertyValue) {
+    'use strict';
+
+    if (propertyValue) {
+        propertyValue = $.trim(propertyValue);
+    }
+    else {
+        propertyValue = '';
+    }
+    model.prop('customProperties/' + propertyName, propertyValue);
+
+    return model;
+};
+
+$('#fit-to-content-button').click(function () {
+    'use strict';
+
+    istar.paper.fitToContent({ padding: 20, allowNewOrigin: 'any', minWidth: 150, minHeight: 150 });
+
+    // Update the positioning of the selection
+    ui.hideSelection();
+
+    console.log("fitToContent showSelection")
+    ui.showSelection();
+});
+
+$('#reset-all-colors-button').click(function () {
+    'use strict';
+
+    $('#all-actor-boundary-color-picker').get(0).jscolor.fromString('E6E6E6');
+    ui.changeColorBoundaries('#E6E6E6');
+    $('#all-elements-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
+    ui.changeColorElements(ui.defaultElementBackgroundColor);
+});
+
+$('#reset-element-color-button').click(function () {
+    'use strict';
+
+    $('#single-element-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
+    ui.changeColorElement(ui.defaultElementBackgroundColor);
+});
+
+ui.setupSidepanelInteraction = function () {
+    'use strict';
+
+    var sidepanelSizes = ['size1', 'size2', 'size3'];
+    var sidepanelCurrentSize = 1;
+    ui.expandSidepanel = function () {
+        if (sidepanelCurrentSize < (sidepanelSizes.length - 1)) {
+            $('#sidepanel').removeClass(sidepanelSizes[sidepanelCurrentSize])
+            sidepanelCurrentSize++;
+            $('#sidepanel').addClass(sidepanelSizes[sidepanelCurrentSize])
+
+            if (sidepanelCurrentSize === 1) {
+                $('#sidepanel').removeClass('collapsed');
+            }
+            if (sidepanelCurrentSize === (sidepanelSizes.length - 1)) {
+                $('#sidepanel').addClass('full');
+            }
+        }
+    };
+    ui.collapseSidepanel = function () {
+        if (sidepanelCurrentSize > 0) {
+            if (sidepanelCurrentSize === (sidepanelSizes.length - 1)) {
+                $('#sidepanel').removeClass('full');
+            }
+
+            $('#sidepanel').removeClass(sidepanelSizes[sidepanelCurrentSize])
+            sidepanelCurrentSize--;
+            $('#sidepanel').addClass(sidepanelSizes[sidepanelCurrentSize])
+
+            if (sidepanelCurrentSize === 0) {
+                $('#sidepanel').addClass('collapsed');
+            }
+        }
+    };
+    $('.collapse-sidepanel-button').click(ui.collapseSidepanel);
+    $('.expand-sidepanel-button').click(ui.expandSidepanel);
+
+    $.fn.editable.defaults.mode = 'inline';//x-editable setting
+};
+
+ui.setupElementResizing = function () {
+    'use strict';
+
+    $('#resize-handle').hide();
+    $('.cell-selection').hide();
+
+    ui.resizeElement = function (element, width, height) {
+        element.resize(width, height);
+        ui.showSelection(ui.getSelectedCells()[0]);
+        element.updateLineBreak();  // Update the line break on the element's label
+    };
+
+    ui.resizeHandlerOnMouseMove = function (e) {
+        var isResizing = true;
+        var viewBBox = ui.getSelectedCells()[0].findView(istar.paper).getBBox();
+        var diagramPosition = $('#out').position();
+
+        var newWidth = e.pageX - viewBBox.x - diagramPosition.left + $('#out').scrollLeft();
+        var newHeight = e.pageY - viewBBox.y - diagramPosition.top + $('#out').scrollTop();
+        if (newWidth < 20) newWidth = 20;
+        if (newHeight < 20) newHeight = 20;
+
+        ui.resizeElement(ui.getSelectedCells()[0], newWidth, newHeight);
+    };
+
+    ui.endResize = function (_e) {
+        istar.resizePaperBasedOnCell(ui.getSelectedCells()[0]);
+        $(window).off('mousemove', ui.resizeHandlerOnMouseMove);
+        $(window).off('mouseup', ui.endResize);
+        var isResizing = false;
+    };
+
+    $('#resize-handle').mousedown(function (e) {
+        e.preventDefault();
+        $(window).mousemove(ui.resizeHandlerOnMouseMove);
+        $(window).mouseup(ui.endResize);
+    });
+    $('#resize-handle').dblclick(function (e) {
+        e.preventDefault();
+
+        //restore element to a default size
+        ui.resizeElement(
+            ui.getSelectedCells()[0],
+            ui.getSelectedCells()[0].prop('originalSize/width'),
+            ui.getSelectedCells()[0].prop('originalSize/height')
+        );
+        if (ui.getSelectedCells()[0].get('parent')) {
+            istar.graph.getCell(ui.getSelectedCells()[0].get('parent')).updateBoundary();
+        }
+    });
+};
+
+ui.alert = function (body, title) {
+    'use strict';
+
+    bootbox.alert({
+        title: title,
+        message: body
+    });
+};
+
+ui.confirm = function (options) {
+    'use strict';
+    //change state to prevent accidental deletes
+    ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
+
+    var callback = options.callback;
+    options.callback = function (value) {
+        //change state back to VIEWING after the prompt is dismissed
+        ui.states.editor.transitionTo(ui.states.editor.VIEWING);
+        callback(value);
+    };
+    options.swapButtonOrder = true;
+    bootbox.confirm(options);
+    // .on('shown.bs.modal', function(e){
+    //     Automatically select the content of the input, so that the user doesn't have to
+    // $(this).find('input').select();
+    // });
+};
+
+ui.prompt = function (options) {
+    'use strict';
+    //change state to prevent accidental deletes
+    ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
+
+    var callback = options.callback;
+    options.callback = function (value) {
+        //change state back to VIEWING after the prompt is dismissed
+        ui.states.editor.transitionTo(ui.states.editor.VIEWING);
+        callback(value);
+    };
+    options.swapButtonOrder = true;
+    bootbox.prompt(options)
+        .on('shown.bs.modal', function (_e) {
+            //Automatically select the content of the input, so that the user doesn't have to
+            $(this).find('input').select();
+        });
+};
+
+ui.displayInvalidLinkMessage = function (message) {
+    'use strict';
+
+    if (message) {
+        ui.alert('INVALID: Sorry, but ' + message, 'Invalid link');
+    }
+    else {
+        ui.alert('INVALID: Sorry, but this link you are trying to create is invalid');
+    }
+    ui.collectErrorData('error');
+};
+
+ui.displayInvalidModelMessage = function (messages) {
+    'use strict';
+
+    if (messages) {
+        var text = '<div class="alert alert-danger">Hello there! Previous versions of the piStar tool allowed the creation of models that break ' +
+            'some rules of the <a href="https://sites.google.com/site/istarlanguage/" target="_blank">iStar 2.0 Language Guide</a>. Please address the issues listed below ' +
+            'in order to ensure that your model will continue to open correctly in future versions of the tool.</div>';
+        text += '<h4>Errors:</h4><ul>';
+
+        _.forEach(messages, function (message) {
+            text += '<li>' + message + '</li>';
+            console.log('INVALID: ' + message);
+        });
+        text += '</ul>';
+        ui.alert(text, 'Invalid model');
+    }
+};
+
+//overrides istar.displayInvalidModelMessages, in order to display the messages in the user interface
+istar.displayInvalidModelMessages = ui.displayInvalidModelMessage;
+
+$('#menu-button-new-model').click(function () {
+    'use strict';
+
+    ui.confirm({
+        message: 'Are you sure you want to create a new model and delete the current model? This action is ' + '<b>irreversible</b>.' + ' TIP: ' + '<b>save your current model</b>' + ' before going through with this action.',
+        callback: function (result) {
+            if (result === true) {
+                istar.clearModel();
+            }
+        }
+    });
+});
+
+ui.changeDependencyLinksOpacity = function (dependumOpacity, linkOpacity) {
+    'use strict';
+
+    var dependencyCells = _.filter(istar.getCells(), function (cell) {
+        return (cell.isDependum() || cell.isDependencyLink());
+    });
+
+    if (dependumOpacity === 1) {
+        _.forEach(dependencyCells, function (cell) {
+            cell.attr('*/display', 'visible');
+        });
+        setTimeout(function () {
+            setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
+        }, 30);
+    }
+    else if (linkOpacity === 0) {
+        setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
+        setTimeout(function () {
+            _.forEach(dependencyCells, function (cell) {
+                cell.attr('*/display', 'none');
+            });
+        }, 300);
+    }
+    else {
+        setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
+    }
+
+    function setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity) {
+        _.forEach(dependencyCells, function (cell) {
+            if (cell.isDependum()) {
+                cell.attr('*/opacity', dependumOpacity);
+            }
+            else {
+                cell.attr('*/opacity', linkOpacity);
+            }
+        });
+    }
+};
+
+ui.changeContributionLinksOpacity = function (linkOpacity) {
+    'use strict';
+
+    var contributionLinks = _.filter(istar.getLinks(), function (link) {
+        return link.isContributionLink();
+    });
+
+    if (linkOpacity === 1) {
+        _.forEach(contributionLinks, function (link) {
+            link.attr('*/display', 'visible');
+        });
+        setTimeout(function () {
+            setContributionsOpacity(contributionLinks, linkOpacity);
+        }, 30);
+    }
+    else if (linkOpacity === 0) {
+        setContributionsOpacity(contributionLinks, linkOpacity);
+        setTimeout(function () {
+            _.forEach(contributionLinks, function (link) {
+                link.attr('*/display', 'none');
+            });
+        }, 300);
+    }
+    else {
+        setContributionsOpacity(contributionLinks, linkOpacity);
+    }
+
+    function setContributionsOpacity(contributionLinks, linkOpacity) {
+        _.forEach(contributionLinks, function (link) {
+            // link.attr('line/opacity', linkOpacity);
+            // link.attr('text/opacity', linkOpacity);
+            link.attr('path/opacity', linkOpacity);
+            link.attr('.labels/opacity', linkOpacity);
+        });
+    }
+};
+
+ui.resetCellDisplayStates = function () {
+    'use strict';
+
+    this.states.cellDisplay.dependencies.currentState = 0;
+    this.states.cellDisplay.contributionLinks.currentState = 0;
+}
+
+$('#menu-button-toggle-dependencies-display').click(function () {
+    'use strict';
+
+    if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.NORMAL) {
+        ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.PARTIAL;
+        //links are darker than dependums. That's why its opacity is smaller
+        ui.changeDependencyLinksOpacity(0.4, 0.1);
+    }
+    else if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.PARTIAL) {
+        ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.HIDDEN;
+        ui.changeDependencyLinksOpacity(0, 0);
         ui.selectPaper();
     }
-    $(document).keyup(function (e) {
-        'use strict';
-
-        if (ui.states.editor.isViewing()) {
-            if (ui.getSelectedCells()[0] !== null) {
-                if (e.which === 8 || e.which === 46) {
-                    // 8: backspace
-                    // 46: delete
-                    // The use of the 'backspace' key, in addition to the 'delete', key aims to improve support for Mac users,
-                    //    since in that system the key named 'delete' actually is a 'backspace' key
-                    if (ui.getSelectedCells()[0].isKindOfActor) {
-                        // If the selected cell does not have the isKindOfActor function, it means that it's not
-                        // really a cell, but the diagram itself. Thus, only delete if it has this function.
-                        if (ui.getSelectedCells()[0].isKindOfActor()) {
-                            ui.confirm({
-                                message: '<b>ATTENTION!</b>' + ' Are you sure you want to delete this entire actor, along with its content?' + '\nTIP: You can undo this action the "Go Back" button.',
-                                callback: function (value) {
-                                    if (value) {
-                                        ui.deleteCell(ui.getSelectedCells()[0]);
-                                    }
-                                }
-                            });
-                        } else {
-                            ui.deleteCell(ui.getSelectedCells()[0]);
-                        }
-                    }
-                }
-                if ((e.ctrlKey || e.metaKey) && e.which === 90) {  //ctrl + z or command + z
-                    e.preventDefault();
-                    istar.undoManager.undo();
-                }
-            }
-        }
-        if (ui.states.editor.isAdding()) {
-            if (e.which === 27) {  //esc
-                ui.states.editor.ADDING.data.button.end();
-                ui.selectPaper();
-            }
-        }
-    });
-
-    ui.resetPointerStyles = function () {
-        'use strict';
-
-        var $diagram = $('#diagram');
-        $diagram.css('cursor', 'auto');
-        $diagram.find('g').css('cursor', 'move');
-        $diagram.find('.actorKindMain').css('cursor', 'move');
-        $('.link-tools g').css('cursor', 'pointer');
-    };
-
-    ui._toggleSmoothness = function (link, vertices, _something) {
-        'use strict';
-
-        if (vertices.length >= 1) {
-            link.set('smooth', true);
-        }
-        else {
-            link.set('smooth', false);
-        }
-    };
-
-
-    ui.changeCustomPropertyValue = function (model, propertyName, propertyValue) {
-        'use strict';
-
-        if (propertyValue) {
-            propertyValue = $.trim(propertyValue);
-        }
-        else {
-            propertyValue = '';
-        }
-        model.prop('customProperties/' + propertyName, propertyValue);
-
-        return model;
-    };
-
-    $('#fit-to-content-button').click(function () {
-        'use strict';
-
-        istar.paper.fitToContent({ padding: 20, allowNewOrigin: 'any', minWidth: 150, minHeight: 150 });
-
-        // Update the positioning of the selection
-        ui.hideSelection();
-
-        console.log("fitToContent showSelection")
-        ui.showSelection();
-    });
-
-    $('#reset-all-colors-button').click(function () {
-        'use strict';
-
-        $('#all-actor-boundary-color-picker').get(0).jscolor.fromString('E6E6E6');
-        ui.changeColorBoundaries('#E6E6E6');
-        $('#all-elements-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
-        ui.changeColorElements(ui.defaultElementBackgroundColor);
-    });
-
-    $('#reset-element-color-button').click(function () {
-        'use strict';
-
-        $('#single-element-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
-        ui.changeColorElement(ui.defaultElementBackgroundColor);
-    });
-
-    ui.setupSidepanelInteraction = function () {
-        'use strict';
-
-        var sidepanelSizes = ['size1', 'size2', 'size3'];
-        var sidepanelCurrentSize = 1;
-        ui.expandSidepanel = function () {
-            if (sidepanelCurrentSize < (sidepanelSizes.length - 1)) {
-                $('#sidepanel').removeClass(sidepanelSizes[sidepanelCurrentSize])
-                sidepanelCurrentSize++;
-                $('#sidepanel').addClass(sidepanelSizes[sidepanelCurrentSize])
-
-                if (sidepanelCurrentSize === 1) {
-                    $('#sidepanel').removeClass('collapsed');
-                }
-                if (sidepanelCurrentSize === (sidepanelSizes.length - 1)) {
-                    $('#sidepanel').addClass('full');
-                }
-            }
-        };
-        ui.collapseSidepanel = function () {
-            if (sidepanelCurrentSize > 0) {
-                if (sidepanelCurrentSize === (sidepanelSizes.length - 1)) {
-                    $('#sidepanel').removeClass('full');
-                }
-
-                $('#sidepanel').removeClass(sidepanelSizes[sidepanelCurrentSize])
-                sidepanelCurrentSize--;
-                $('#sidepanel').addClass(sidepanelSizes[sidepanelCurrentSize])
-
-                if (sidepanelCurrentSize === 0) {
-                    $('#sidepanel').addClass('collapsed');
-                }
-            }
-        };
-        $('.collapse-sidepanel-button').click(ui.collapseSidepanel);
-        $('.expand-sidepanel-button').click(ui.expandSidepanel);
-
-        $.fn.editable.defaults.mode = 'inline';//x-editable setting
-    };
-
-    ui.setupElementResizing = function () {
-        'use strict';
-
-        $('#resize-handle').hide();
-        $('.cell-selection').hide();
-
-        ui.resizeElement = function (element, width, height) {
-            element.resize(width, height);
-            ui.showSelection(ui.getSelectedCells()[0]);
-            element.updateLineBreak();  // Update the line break on the element's label
-        };
-
-        ui.resizeHandlerOnMouseMove = function (e) {
-            var isResizing = true;
-            var viewBBox = ui.getSelectedCells()[0].findView(istar.paper).getBBox();
-            var diagramPosition = $('#out').position();
-
-            var newWidth = e.pageX - viewBBox.x - diagramPosition.left + $('#out').scrollLeft();
-            var newHeight = e.pageY - viewBBox.y - diagramPosition.top + $('#out').scrollTop();
-            if (newWidth < 20) newWidth = 20;
-            if (newHeight < 20) newHeight = 20;
-
-            ui.resizeElement(ui.getSelectedCells()[0], newWidth, newHeight);
-        };
-
-        ui.endResize = function (_e) {
-            istar.resizePaperBasedOnCell(ui.getSelectedCells()[0]);
-            $(window).off('mousemove', ui.resizeHandlerOnMouseMove);
-            $(window).off('mouseup', ui.endResize);
-            var isResizing = false;
-        };
-
-        $('#resize-handle').mousedown(function (e) {
-            e.preventDefault();
-            $(window).mousemove(ui.resizeHandlerOnMouseMove);
-            $(window).mouseup(ui.endResize);
-        });
-        $('#resize-handle').dblclick(function (e) {
-            e.preventDefault();
-
-            //restore element to a default size
-            ui.resizeElement(
-                ui.getSelectedCells()[0],
-                ui.getSelectedCells()[0].prop('originalSize/width'),
-                ui.getSelectedCells()[0].prop('originalSize/height')
-            );
-            if (ui.getSelectedCells()[0].get('parent')) {
-                istar.graph.getCell(ui.getSelectedCells()[0].get('parent')).updateBoundary();
-            }
-        });
-    };
-
-    ui.alert = function (body, title) {
-        'use strict';
-
-        bootbox.alert({
-            title: title,
-            message: body
-        });
-    };
-
-    ui.confirm = function (options) {
-        'use strict';
-        //change state to prevent accidental deletes
-        ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
-
-        var callback = options.callback;
-        options.callback = function (value) {
-            //change state back to VIEWING after the prompt is dismissed
-            ui.states.editor.transitionTo(ui.states.editor.VIEWING);
-            callback(value);
-        };
-        options.swapButtonOrder = true;
-        bootbox.confirm(options);
-        // .on('shown.bs.modal', function(e){
-        //     Automatically select the content of the input, so that the user doesn't have to
-        // $(this).find('input').select();
-        // });
-    };
-
-    ui.prompt = function (options) {
-        'use strict';
-        //change state to prevent accidental deletes
-        ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);
-
-        var callback = options.callback;
-        options.callback = function (value) {
-            //change state back to VIEWING after the prompt is dismissed
-            ui.states.editor.transitionTo(ui.states.editor.VIEWING);
-            callback(value);
-        };
-        options.swapButtonOrder = true;
-        bootbox.prompt(options)
-            .on('shown.bs.modal', function (_e) {
-                //Automatically select the content of the input, so that the user doesn't have to
-                $(this).find('input').select();
-            });
-    };
-
-    ui.displayInvalidLinkMessage = function (message) {
-        'use strict';
-
-        if (message) {
-            ui.alert('INVALID: Sorry, but ' + message, 'Invalid link');
-        }
-        else {
-            ui.alert('INVALID: Sorry, but this link you are trying to create is invalid');
-        }
-        ui.collectErrorData('error');
-    };
-
-    ui.displayInvalidModelMessage = function (messages) {
-        'use strict';
-
-        if (messages) {
-            var text = '<div class="alert alert-danger">Hello there! Previous versions of the piStar tool allowed the creation of models that break ' +
-                'some rules of the <a href="https://sites.google.com/site/istarlanguage/" target="_blank">iStar 2.0 Language Guide</a>. Please address the issues listed below ' +
-                'in order to ensure that your model will continue to open correctly in future versions of the tool.</div>';
-            text += '<h4>Errors:</h4><ul>';
-
-            _.forEach(messages, function (message) {
-                text += '<li>' + message + '</li>';
-                console.log('INVALID: ' + message);
-            });
-            text += '</ul>';
-            ui.alert(text, 'Invalid model');
-        }
-    };
-
-    //overrides istar.displayInvalidModelMessages, in order to display the messages in the user interface
-    istar.displayInvalidModelMessages = ui.displayInvalidModelMessage;
-
-    $('#menu-button-new-model').click(function () {
-        'use strict';
-
-        ui.confirm({
-            message: 'Are you sure you want to create a new model and delete the current model? This action is ' + '<b>irreversible</b>.' + ' TIP: ' + '<b>save your current model</b>' + ' before going through with this action.',
-            callback: function (result) {
-                if (result === true) {
-                    istar.clearModel();
-                }
-            }
-        });
-    });
-
-    ui.changeDependencyLinksOpacity = function (dependumOpacity, linkOpacity) {
-        'use strict';
-
-        var dependencyCells = _.filter(istar.getCells(), function (cell) {
-            return (cell.isDependum() || cell.isDependencyLink());
-        });
-
-        if (dependumOpacity === 1) {
-            _.forEach(dependencyCells, function (cell) {
-                cell.attr('*/display', 'visible');
-            });
-            setTimeout(function () {
-                setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
-            }, 30);
-        }
-        else if (linkOpacity === 0) {
-            setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
-            setTimeout(function () {
-                _.forEach(dependencyCells, function (cell) {
-                    cell.attr('*/display', 'none');
-                });
-            }, 300);
-        }
-        else {
-            setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity);
-        }
-
-        function setDependenciesOpacity(dependencyCells, dependumOpacity, linkOpacity) {
-            _.forEach(dependencyCells, function (cell) {
-                if (cell.isDependum()) {
-                    cell.attr('*/opacity', dependumOpacity);
-                }
-                else {
-                    cell.attr('*/opacity', linkOpacity);
-                }
-            });
-        }
-    };
-
-    ui.changeContributionLinksOpacity = function (linkOpacity) {
-        'use strict';
-
-        var contributionLinks = _.filter(istar.getLinks(), function (link) {
-            return link.isContributionLink();
-        });
-
-        if (linkOpacity === 1) {
-            _.forEach(contributionLinks, function (link) {
-                link.attr('*/display', 'visible');
-            });
-            setTimeout(function () {
-                setContributionsOpacity(contributionLinks, linkOpacity);
-            }, 30);
-        }
-        else if (linkOpacity === 0) {
-            setContributionsOpacity(contributionLinks, linkOpacity);
-            setTimeout(function () {
-                _.forEach(contributionLinks, function (link) {
-                    link.attr('*/display', 'none');
-                });
-            }, 300);
-        }
-        else {
-            setContributionsOpacity(contributionLinks, linkOpacity);
-        }
-
-        function setContributionsOpacity(contributionLinks, linkOpacity) {
-            _.forEach(contributionLinks, function (link) {
-                // link.attr('line/opacity', linkOpacity);
-                // link.attr('text/opacity', linkOpacity);
-                link.attr('path/opacity', linkOpacity);
-                link.attr('.labels/opacity', linkOpacity);
-            });
-        }
-    };
-
-    ui.resetCellDisplayStates = function () {
-        'use strict';
-
-        this.states.cellDisplay.dependencies.currentState = 0;
-        this.states.cellDisplay.contributionLinks.currentState = 0;
+    else if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.HIDDEN) {
+        ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.NORMAL;
+        ui.changeDependencyLinksOpacity(1, 1);
     }
+});
 
-    $('#menu-button-toggle-dependencies-display').click(function () {
-        'use strict';
+$('#menu-button-toggle-contributions-display').click(function () {
+    'use strict';
 
-        if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.NORMAL) {
-            ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.PARTIAL;
-            //links are darker than dependums. That's why its opacity is smaller
-            ui.changeDependencyLinksOpacity(0.4, 0.1);
-        }
-        else if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.PARTIAL) {
-            ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.HIDDEN;
-            ui.changeDependencyLinksOpacity(0, 0);
-            ui.selectPaper();
-        }
-        else if (ui.states.cellDisplay.dependencies.currentState === ui.states.cellDisplay.dependencies.HIDDEN) {
-            ui.states.cellDisplay.dependencies.currentState = ui.states.cellDisplay.dependencies.NORMAL;
-            ui.changeDependencyLinksOpacity(1, 1);
-        }
-    });
+    if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.NORMAL) {
+        ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.PARTIAL;
+        //links are darker than dependums. That's why its opacity is smaller
+        ui.changeContributionLinksOpacity(0.3);
+    }
+    else if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.PARTIAL) {
+        ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.HIDDEN;
+        ui.changeContributionLinksOpacity(0);
+        ui.selectPaper();
+    }
+    else if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.HIDDEN) {
+        ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.NORMAL;
+        ui.changeContributionLinksOpacity(1);
+    }
+});
 
-    $('#menu-button-toggle-contributions-display').click(function () {
-        'use strict';
+$('#menu-item-undo').click(function () {
+    'use strict';
 
-        if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.NORMAL) {
-            ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.PARTIAL;
-            //links are darker than dependums. That's why its opacity is smaller
-            ui.changeContributionLinksOpacity(0.3);
-        }
-        else if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.PARTIAL) {
-            ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.HIDDEN;
-            ui.changeContributionLinksOpacity(0);
-            ui.selectPaper();
-        }
-        else if (ui.states.cellDisplay.contributionLinks.currentState === ui.states.cellDisplay.contributionLinks.HIDDEN) {
-            ui.states.cellDisplay.contributionLinks.currentState = ui.states.cellDisplay.contributionLinks.NORMAL;
-            ui.changeContributionLinksOpacity(1);
-        }
-    });
+    istar.undoManager.undo();
+});
 
-    $('#menu-item-undo').click(function () {
-        'use strict';
+// Prevent accidental undos. There's no need to use this button through the keyboard, since the user can use
+// its shortcut instead
+$('#menu-item-undo').focus(function (_e) { this.blur() });
 
-        istar.undoManager.undo();
-    });
+istar.undoManager.callback = function (empty) {
+    'use strict';
 
-    // Prevent accidental undos. There's no need to use this button through the keyboard, since the user can use
-    // its shortcut instead
-    $('#menu-item-undo').focus(function (_e) { this.blur() });
-
-    istar.undoManager.callback = function (empty) {
-        'use strict';
-
-        if (empty) {
-            $('#menu-item-undo').addClass('inactive');
-        }
-        else {
-            $('#menu-item-undo').removeClass('inactive');
-        }
-    };
+    if (empty) {
+        $('#menu-item-undo').addClass('inactive');
+    }
+    else {
+        $('#menu-item-undo').removeClass('inactive');
+    }
+};
 
 /*definition of globals to prevent undue JSHint warnings*/
 /*globals istar:false, console:false, $:false, _:false, joint:false, uiC:false, bootbox:false */
