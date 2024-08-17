@@ -243,6 +243,8 @@ diagramElement.style.position = "relative";
 
 document.addEventListener('mousedown', function (event) {
 
+    ui.hideSelection();
+
     if (event.target.closest('#out')) {
         const cellView = istar.paper.findView(event.target);
 
@@ -388,8 +390,6 @@ function updateSidePanel() {
     $('#delete-elements-button').click(function (e) {
         const selectedCells = ui.selectedCells;
         if (selectedCells && selectedCells.length > 0) {
-            console.log('array size:' + selectedCells.length);
-            console.log(selectedCells);
             selectedCells.forEach(cell => {
                 console.log('going to delete ' + cell.attributes.name);
                 ui.selectedCell = cell;
