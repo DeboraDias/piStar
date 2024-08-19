@@ -398,14 +398,9 @@ ui.components.PropertiesTableView = Backbone.View.extend({
             }
         } else if (selectedCells.length > 1) { 
             console.log("Multiple cells selected. No color picker available.");
-            $('#subpanel-style').html('<div id="multi-select-message">To edit style, select only one item.</div>');
+            $('#subpanel-style').hide();
         } else {
-            console.log("No cells selected.");
-            if (colorPickerElement && colorPickerElement.jscolor) {
-                colorPickerElement.jscolor.fromString(ui.defaultElementBackgroundColor); 
-            } else {
-                console.warn('Color picker element or jscolor object is not initialized.');
-            }
+            $('#subpanel-style').hide();
             
         }
     },

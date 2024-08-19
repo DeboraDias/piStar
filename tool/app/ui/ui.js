@@ -123,7 +123,7 @@ var ui = function () {
                     istar.paper.trigger('change:selection', { selectedCell: cell });
                 }
                 if (cell.isElement()) {
-                    $('#sidepanel-tab-style').show();
+                    $('#sidepanel-tab-style').hide();
                 }
                 else {
                     $('#sidepanel-tab-style').hide();
@@ -342,10 +342,7 @@ document.addEventListener('mouseup', function (event) {
                 diagramElement.appendChild(selectionBox);
 
                 updateSidePanel();
-            } else {
-                // Optionally, remove the visual indicator if the cell is not selected
-                cell.attr(".element", { stroke: "black", "stroke-width": 1 });
-            }
+            } 
         });
 
     }
@@ -428,25 +425,6 @@ function updateSidePanel() {
 function generateReport(selectedItems) {
     istar.fileManager.generateReportForSelection(selectedItems);
 }
-
-/* document.addEventListener('click', function (event) {
-    const clickedCell = findClickedCell(event.pageX, event.pageY);
-
-    const isCtrlOrCommandPressed = event.ctrlKey || event.metaKey;
-    if (isCtrlOrCommandPressed) {
-
-        if (clickedCell) {
-            console.log('Clicked cell:', clickedCell);
-            // Handle the cell selection logic here
-        } else {
-            console.log('No cell was clicked.');
-            // Handle clicks outside any cell
-        }
-
-        // Update the side panel based on the current selection
-        updateSidePanel();
-    };
-}); */
 
 function updateColorPicker(selectedElement) {
     const colorPickerElement = document.getElementById('single-element-color-picker');
