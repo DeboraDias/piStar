@@ -255,8 +255,7 @@ document.addEventListener('mousedown', function (event) {
         if (cellView) {
             ui.selectedCells = [];
             ui.selectCell(cellView.model);  // Select the clicked cell
-            dragStart = false;  // Prevent the selection box logic
-            // Hide the selection box when starting to move a cell
+            dragStart = false; 
             ui.hideSelection();
             return;  // Exit the function to avoid starting the selection box
         }
