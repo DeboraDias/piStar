@@ -248,6 +248,9 @@ document.addEventListener('mousedown', function (event) {
     if (event.target.closest('#out')) {
         const cellView = istar.paper.findView(event.target);
 
+        ui.deselectCell();
+        ui.selectPaper(); // Deselect everything after deletion 
+        
         // If the click occurred on a cell, don't start the drag selection
         if (cellView) {
             ui.selectedCells = [];
@@ -388,10 +391,8 @@ function updateSidePanel() {
         const selectedCells = ui.selectedCells;
         if (selectedCells && selectedCells.length > 0) {
             selectedCells.forEach(cell => {
-                console.log('going to delete ' + cell.attributes.name);
                 ui.selectedCell = cell;
                 ui.deleteCell(cell);
-                console.log(`selected cells after deletion ${ui.selectedCells}`);
             });
             ui.selectPaper(); // Deselect everything after deletion
         }
@@ -658,23 +659,6 @@ ui.defineInteractions = function () {
             //programatically remove focus from any active input, since JointJS prevents this default behavior
             $('input:focus').blur();
         }
-
-        /* // Check if clicked on an item inside an actor or agent
-        var clickedInnerItem = findClickedCell(_evt.pageX, _evt.pageY);
-
-        if (clickedInnerItem && clickedInnerItem !== cellView.model) {
-            ui.selectCell(clickedInnerItem);
-        } else {
-            // Select the current cell if no inner item is clicked
-            ui.selectCell(cellView.model, cellView);
-        }
-        // Programatically remove focus from any active input, since JointJS prevents this default behavior
-        $('input:focus').blur();
-
-        // Prevent selection to appear while the element is being moved
-        if (ui.getSelectedCells()[0].isElement()) {
-            ui.hideSelection();
-        } */
     });
 
     istar.paper.on('cell:pointerup', function (cellView, evt, x, y) {
@@ -1466,7 +1450,6 @@ ui.changeAddMenuStatus = function (text) {
 };
 
 ui.deleteCell = function (cellToDelete) {
-    console.log('came in to delete ' + cellToDelete.attributes.name);
     function getDependencyFromDependencyLink(link) {
         let dependum = null;
         if (link.getSourceElement() && link.getSourceElement().isDependum()) {
