@@ -397,10 +397,6 @@ function updateSidePanel() {
         }
         ui.collectActionData('click', e.currentTarget.id);
     });
-
-    $('#cell-actions').append(
-        '<tr><td colspan="2"><i>Tip: To delete more than one item, use the delete button.</i></td></tr>'
-    );
     
     addPropertyButton.style.display = 'none';
 
@@ -1603,6 +1599,7 @@ $(document).keyup(function (e) {
     if (ui.states.editor.isViewing()) {
         if (ui.getSelectedCells()[0] !== null) {
             if (e.which === 8 || e.which === 46) {
+                $('#delete-elements-button').click();
                 // 8: backspace
                 // 46: delete
                 // The use of the 'backspace' key, in addition to the 'delete', key aims to improve support for Mac users,
