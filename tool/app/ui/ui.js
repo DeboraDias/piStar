@@ -382,7 +382,7 @@ function updateSidePanel() {
     propertiesTable.innerHTML = '<tr><td colspan="2">To see properties, select only one item.</td></tr>';
     actionsDiv.innerHTML = '';
     actionsDiv.innerHTML += '<button id="generate-report" class="btn btn-rep btn-default btn-xs button-horizontal">Generate Report</button><br>';
-    /*  actionsDiv.innerHTML += '<button id="delete-element-button1" class="btn btn-delete btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'; */
+  
     $('#cell-actions').append(
         '<a id="delete-elements-button" class="btn btn-delete btn-default btn-xs button-horizontal" title="Shortcut: Delete key">Delete</a><br>'
     );
@@ -397,6 +397,11 @@ function updateSidePanel() {
         }
         ui.collectActionData('click', e.currentTarget.id);
     });
+
+    $('#cell-actions').append(
+        '<tr><td colspan="2"><i>Tip: To delete more than one item, use the delete button.</i></td></tr>'
+    );
+    
     addPropertyButton.style.display = 'none';
 
     document.getElementById('generate-report').onclick = function () {
